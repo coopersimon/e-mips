@@ -1,5 +1,7 @@
 #[macro_use]
 mod common;
 
-mod mem;
-
+/// MIPS CPUs.
+pub mod cpu;
+/// Memory bus attachment traits.
+pub mod mem;
