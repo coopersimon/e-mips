@@ -63,3 +63,11 @@ macro_rules! bytes64 {
          ($val >> 24) as u8, ($val >> 16) as u8, ($val >> 8) as u8, $val as u8)
     };
 }
+
+// Sign-extend a 16-bit immediate value.
+// Returns a 32-bit unsigned value.
+macro_rules! sign_extend {
+    ($val:expr) => {
+        ($val as i32) as u32
+    };
+}
