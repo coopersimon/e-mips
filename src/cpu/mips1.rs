@@ -158,6 +158,62 @@ pub trait MIPSIInstructions: MIPSICore {
     fn mtlo(&mut self, src_reg: usize) {
         self.write_lo(self.read_gp(src_reg));
     }
+
+    /// AND
+    fn and(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
+        let source = self.read_gp(src_reg);
+        let target = self.read_gp(tgt_reg);
+        let result = source & target;
+        self.write_gp(dst_reg, result);
+    }
+
+    /// ANDI
+    fn andi(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
+        let source = self.read_gp(src_reg);
+        let imm_32 = imm as u32;
+        let result = source & imm_32;
+        self.write_gp(tgt_reg, result);
+    }
+
+    /// OR
+    fn or(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
+        let source = self.read_gp(src_reg);
+        let target = self.read_gp(tgt_reg);
+        let result = source | target;
+        self.write_gp(dst_reg, result);
+    }
+
+    /// ORI
+    fn ori(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
+        let source = self.read_gp(src_reg);
+        let imm_32 = imm as u32;
+        let result = source | imm_32;
+        self.write_gp(tgt_reg, result);
+    }
+
+    /// XOR
+    fn xor(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
+        let source = self.read_gp(src_reg);
+        let target = self.read_gp(tgt_reg);
+        let result = source ^ target;
+        self.write_gp(dst_reg, result);
+    }
+
+    /// XORI
+    fn xori(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
+        let source = self.read_gp(src_reg);
+        let imm_32 = imm as u32;
+        let result = source ^ imm_32;
+        self.write_gp(tgt_reg, result);
+    }
+
+    /// NOR
+    fn nor(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
+        let source = self.read_gp(src_reg);
+        let target = self.read_gp(tgt_reg);
+        let result = source | target;
+        self.write_gp(dst_reg, !result);
+    }
 }
 
 #[cfg(test)]
@@ -348,6 +404,7 @@ mod test {
         assert_eq!(cpu.read_lo(), 0);
         assert_eq!(cpu.read_hi(), 0xFFFF_FFFF);
     }
+
     #[test]
     fn divu() {
         let mut cpu = MIPSI::default();
@@ -365,5 +422,72 @@ mod test {
         cpu.divu(1, 2);
         assert_eq!(cpu.read_lo(), 1);
         assert_eq!(cpu.read_hi(), 1);
+    }
+
+    #[test]
+    fn and() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x4F4F_1111);
+        cpu.write_gp(2, 0x0808_5555);
+        cpu.and(1, 2, 3);
+        assert_eq!(cpu.read_gp(3), 0x0808_1111);
+    }
+
+    #[test]
+    fn andi() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x4F4F_1111);
+        cpu.andi(1, 2, 0xFFCC);
+        assert_eq!(cpu.read_gp(2), 0x1100);
+    }
+
+    #[test]
+    fn or() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x4F4F_1111);
+        cpu.write_gp(2, 0x0808_5555);
+        cpu.or(1, 2, 3);
+        assert_eq!(cpu.read_gp(3), 0x4F4F_5555);
+    }
+
+    #[test]
+    fn ori() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x4F4F_1111);
+        cpu.ori(1, 2, 0xFFCC);
+        assert_eq!(cpu.read_gp(2), 0x4F4F_FFDD);
+    }
+
+    #[test]
+    fn xor() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x4F4F_1111);
+        cpu.write_gp(2, 0x0808_5555);
+        cpu.xor(1, 2, 3);
+        assert_eq!(cpu.read_gp(3), 0x4747_4444);
+    }
+
+    #[test]
+    fn xori() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x4F4F_1111);
+        cpu.xori(1, 2, 0xFFCC);
+        assert_eq!(cpu.read_gp(2), 0x4F4F_EEDD);
+    }
+
+    #[test]
+    fn nor() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x4F4F_1111);
+        cpu.write_gp(2, 0x0808_5555);
+        cpu.nor(1, 2, 3);
+        assert_eq!(cpu.read_gp(3), 0xB0B0_AAAA);
     }
 }
