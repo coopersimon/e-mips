@@ -64,10 +64,32 @@ macro_rules! bytes64 {
     };
 }
 
-// Sign-extend a 16-bit immediate value.
-// Returns a 32-bit unsigned value.
-macro_rules! sign_extend {
+// Get the low word of a 64-bit value.
+macro_rules! lo64 {
     ($val:expr) => {
-        ($val as i32) as u32
+        $val as u32
+    };
+}
+
+// Get the high word of a 64-bit value.
+macro_rules! hi64 {
+    ($val:expr) => {
+        ($val >> 32) as u32
+    };
+}
+
+// Sign-extend a 16-bit value.
+// Returns a 32-bit unsigned value.
+macro_rules! sign_extend_16 {
+    ($val:expr) => {
+        (($val as i16) as i32) as u32
+    };
+}
+
+// Sign-extend a 32-bit value.
+// Returns a 64-bit signed value.
+macro_rules! sign_extend_32 {
+    ($val:expr) => {
+        ($val as i32) as i64
     };
 }

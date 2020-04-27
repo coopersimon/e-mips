@@ -46,6 +46,8 @@ impl MIPSIInstructions for MIPSI {}
 /// 
 /// The arguments must have been decoded prior to calling these.
 pub trait MIPSIInstructions: MIPSICore {
+    // Arithmetic
+
     /// ADD
     fn add(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
         let source = self.read_gp(src_reg);
@@ -58,9 +60,9 @@ pub trait MIPSIInstructions: MIPSICore {
     }
 
     /// ADDI
-    fn addi(&mut self, src_reg: usize, tgt_reg: usize, imm: i16) {
+    fn addi(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
         let source = self.read_gp(src_reg);
-        let imm_32 = sign_extend!(imm);
+        let imm_32 = sign_extend_16!(imm);
         if let Some(result) = source.checked_add(imm_32) {
             self.write_gp(tgt_reg, result);
         } else {
@@ -77,11 +79,84 @@ pub trait MIPSIInstructions: MIPSICore {
     }
 
     /// ADDIU
-    fn addiu(&mut self, src_reg: usize, tgt_reg: usize, imm: i16) {
+    fn addiu(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
         let source = self.read_gp(src_reg);
-        let imm_32 = sign_extend!(imm);
+        let imm_32 = sign_extend_16!(imm);
         let result = source.wrapping_add(imm_32);
         self.write_gp(tgt_reg, result);
+    }
+
+    /// SUB
+    fn sub(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
+        let source = self.read_gp(src_reg);
+        let target = self.read_gp(tgt_reg);
+        if let Some(result) = source.checked_sub(target) {
+            self.write_gp(dst_reg, result);
+        } else {
+            self.trigger_exception(Exception::ArithmeticOverflow);
+        }
+    }
+
+    /// SUBU
+    fn subu(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
+        let source = self.read_gp(src_reg);
+        let target = self.read_gp(tgt_reg);
+        let result = source.wrapping_sub(target);
+        self.write_gp(dst_reg, result);
+    }
+
+    /// MULT
+    fn mult(&mut self, src_reg: usize, tgt_reg: usize) {
+        let source = sign_extend_32!(self.read_gp(src_reg));
+        let target = sign_extend_32!(self.read_gp(tgt_reg));
+        let result = source * target;
+        self.write_hi(hi64!(result as u64));
+        self.write_lo(lo64!(result as u64));
+    }
+
+    /// MULTU
+    fn multu(&mut self, src_reg: usize, tgt_reg: usize) {
+        let source = self.read_gp(src_reg) as u64;
+        let target = self.read_gp(tgt_reg) as u64;
+        let result = source * target;
+        self.write_hi(hi64!(result));
+        self.write_lo(lo64!(result));
+    }
+
+    /// DIV
+    fn div(&mut self, src_reg: usize, tgt_reg: usize) {
+        let source = self.read_gp(src_reg) as i32;
+        let target = self.read_gp(tgt_reg) as i32;
+        self.write_hi((source % target) as u32);
+        self.write_lo((source / target) as u32);
+    }
+
+    /// DIVU
+    fn divu(&mut self, src_reg: usize, tgt_reg: usize) {
+        let source = self.read_gp(src_reg);
+        let target = self.read_gp(tgt_reg);
+        self.write_hi(source % target);
+        self.write_lo(source / target);
+    }
+
+    /// MFHI
+    fn mfhi(&mut self, dst_reg: usize) {
+        self.write_gp(dst_reg, self.read_hi());
+    }
+
+    /// MTHI
+    fn mthi(&mut self, src_reg: usize) {
+        self.write_hi(self.read_gp(src_reg));
+    }
+
+    /// MFLO
+    fn mflo(&mut self, dst_reg: usize) {
+        self.write_gp(dst_reg, self.read_lo());
+    }
+
+    /// MTLO
+    fn mtlo(&mut self, src_reg: usize) {
+        self.write_lo(self.read_gp(src_reg));
     }
 }
 
@@ -142,7 +217,7 @@ mod test {
 
         // Test overflow.
         cpu.write_gp(1, 0x10000);
-        cpu.addi(1, 2, 0x8000u16 as i16);
+        cpu.addi(1, 2, 0x8000);
         assert_eq!(cpu.read_gp(2), 0);
     }
     
@@ -176,8 +251,119 @@ mod test {
 
         // Test overflow.
         cpu.write_gp(1, 0x10000);
-        cpu.addiu(1, 2, 0x8000u16 as i16);
+        cpu.addiu(1, 2, 0x8000);
         assert_eq!(cpu.read_gp(2), 0x8000);
     }
+    
+    #[test]
+    fn sub() {
+        let mut cpu = MIPSI::default();
 
+        cpu.write_gp(1, 0x5555);
+        cpu.write_gp(2, 0x1234);
+        cpu.sub(1, 2, 3);
+        assert_eq!(cpu.read_gp(3), 0x4321);
+
+        let mut cpu = MIPSI::default();
+
+        // Test overflow.
+        cpu.write_gp(1, 0xFFFFFFFE);
+        cpu.write_gp(2, 0xFFFFFFFF);
+        cpu.sub(1, 2, 3);
+        assert_eq!(cpu.read_gp(3), 0);
+    }
+    
+    #[test]
+    fn subu() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x5555);
+        cpu.write_gp(2, 0x1234);
+        cpu.subu(1, 2, 3);
+        assert_eq!(cpu.read_gp(3), 0x4321);
+
+        let mut cpu = MIPSI::default();
+
+        // Test overflow.
+        cpu.write_gp(1, 0xFFFFFFFE);
+        cpu.write_gp(2, 0xFFFFFFFF);
+
+        cpu.subu(1, 2, 3);
+        assert_eq!(cpu.read_gp(3), -1i32 as u32);
+    }
+    
+    #[test]
+    fn mult() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x1000_0000);
+        cpu.write_gp(2, 0x2000_0000);
+        cpu.mult(1, 2);
+        assert_eq!(cpu.read_lo(), 0);
+        assert_eq!(cpu.read_hi(), 0x200_0000);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0xFFFF_FFFF);
+        cpu.write_gp(2, 0x3);
+        cpu.mult(1, 2);
+        assert_eq!(cpu.read_lo(), 0xFFFF_FFFD);
+        assert_eq!(cpu.read_hi(), 0xFFFF_FFFF);
+    }
+
+    #[test]
+    fn multu() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x1000_0000);
+        cpu.write_gp(2, 0x2000_0000);
+        cpu.multu(1, 2);
+        assert_eq!(cpu.read_lo(), 0);
+        assert_eq!(cpu.read_hi(), 0x200_0000);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0xFFFF_FFFF);
+        cpu.write_gp(2, 0x3);
+        cpu.multu(1, 2);
+        assert_eq!(cpu.read_lo(), 0xFFFF_FFFD);
+        assert_eq!(cpu.read_hi(), 0x2);
+    }
+
+    #[test]
+    fn div() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x8000_0000);
+        cpu.write_gp(2, 0x2);
+        cpu.div(1, 2);
+        assert_eq!(cpu.read_lo(), 0xC000_0000);
+        assert_eq!(cpu.read_hi(), 0);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0xFFFF_FFFF);
+        cpu.write_gp(2, 0xFFFF_FFFE);
+        cpu.div(1, 2);
+        assert_eq!(cpu.read_lo(), 0);
+        assert_eq!(cpu.read_hi(), 0xFFFF_FFFF);
+    }
+    #[test]
+    fn divu() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x8000_0000);
+        cpu.write_gp(2, 0x2);
+        cpu.divu(1, 2);
+        assert_eq!(cpu.read_lo(), 0x4000_0000);
+        assert_eq!(cpu.read_hi(), 0);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0xFFFF_FFFF);
+        cpu.write_gp(2, 0xFFFF_FFFE);
+        cpu.divu(1, 2);
+        assert_eq!(cpu.read_lo(), 1);
+        assert_eq!(cpu.read_hi(), 1);
+    }
 }
