@@ -1,107 +1,121 @@
-/// Little endian memory traits.
+/// Little endian memory implementations.
 
-use super::{
-    AddrBus,
-    Memory
-};
+/// This provides default implementations for the `Mem16` trait, however they are not very optimal
+/// and you might get better performance from implementing them yourself.
+#[macro_export]
+macro_rules! impl_mem_16_little {
+    {$struct:ident} => {
+        impl Mem16 for $struct {
+            fn read_halfword(&mut self, addr: Self::Addr) -> u16 {
+                use num_traits::identities::One;
 
-/// Read a 16-bit value, using little-endianness.
-/// 
-/// Reads from this can be expected to be aligned (the bottom addr bit should be 0).
-/// Unaligned reads are undefined, and might panic.
-pub fn read_halfword<M: Memory>(mem: &mut M, addr: AddrBus<M::Width>) -> u16 {
-    let lo = mem.read_byte(addr);
-    let hi = mem.read_byte(addr.inc());
-    make16!(hi, lo)
+                let lo = self.read_byte(addr);
+                let hi = self.read_byte(addr + Self::Addr::one());
+                make16!(hi, lo)
+            }
+
+            fn write_halfword(&mut self, addr: Self::Addr, data: u16) {
+                use num_traits::identities::One;
+
+                let lo = lo16!(data);
+                let hi = hi16!(data);
+                self.write_byte(addr, lo);
+                self.write_byte(addr + Self::Addr::one(), hi);
+            }
+        }
+    };
 }
 
-/// Write a 16-bit value, using little-endianness.
-/// 
-/// Writes to this can be expected to be aligned (the bottom addr bit should be 0).
-/// Unaligned writes are undefined, and might panic.
-pub fn write_halfword<M: Memory>(mem: &mut M, addr: AddrBus<M::Width>, data: u16) {
-    let lo = lo16!(data);
-    let hi = hi16!(data);
-    mem.write_byte(addr, lo);
-    mem.write_byte(addr.inc(), hi);
+/// This provides default implementations for the `Mem32` and `Mem16` traits, however they are not very optimal
+/// and you might get better performance from implementing them yourself.
+#[macro_export]
+macro_rules! impl_mem_32_little {
+    {$struct:ident} => {
+        impl_mem_16_little!{ $struct }
+
+        impl Mem32 for $struct {
+            fn read_word(&mut self, addr: Self::Addr) -> u32 {
+                use num_traits::identities::One;
+
+                let addr0 = addr;
+                let addr1 = addr0 + Self::Addr::one();
+                let addr2 = addr1 + Self::Addr::one();
+                let addr3 = addr2 + Self::Addr::one();
+                let b0 = self.read_byte(addr0);
+                let b1 = self.read_byte(addr1);
+                let b2 = self.read_byte(addr2);
+                let b3 = self.read_byte(addr3);
+                make32!(b3, b2, b1, b0)
+            }
+
+            fn write_word(&mut self, addr: Self::Addr, data: u32) {
+                use num_traits::identities::One;
+
+                let bytes = bytes32!(data);
+                let addr0 = addr;
+                let addr1 = addr0 + Self::Addr::one();
+                let addr2 = addr1 + Self::Addr::one();
+                let addr3 = addr2 + Self::Addr::one();
+                self.write_byte(addr0, bytes.0);
+                self.write_byte(addr1, bytes.1);
+                self.write_byte(addr2, bytes.2);
+                self.write_byte(addr3, bytes.3);
+            }
+        }
+    };
 }
 
-/// Read a 32-bit value, using little-endianness.
-/// 
-/// Reads from this can be expected to be aligned (the bottom 2 addr bits should be 0).
-/// Unaligned reads are undefined, and might panic.
-pub fn read_word<M: Memory>(mem: &mut M, addr: AddrBus<M::Width>) -> u32 {
-    let addr0 = addr;
-    let addr1 = addr0.inc();
-    let addr2 = addr1.inc();
-    let addr3 = addr2.inc();
-    let b0 = mem.read_byte(addr0);
-    let b1 = mem.read_byte(addr1);
-    let b2 = mem.read_byte(addr2);
-    let b3 = mem.read_byte(addr3);
-    make32!(b3, b2, b1, b0)
-}
+/// This provides default implementations for the `Mem64`, `Mem32` and `Mem16` traits, however they are not very optimal
+/// and you might get better performance from implementing them yourself.
+#[macro_export]
+macro_rules! impl_mem_64_little {
+    {$struct:ident} => {
+        impl_mem_32_little!{ $struct }
 
-/// Write a 32-bit value, using little-endianness.
-/// 
-/// Writes to this can be expected to be aligned (the bottom 2 addr bits should be 0).
-/// Unaligned writes are undefined, and might panic.
-pub fn write_word<M: Memory>(mem: &mut M, addr: AddrBus<M::Width>, data: u32) {
-    let bytes = bytes32!(data);
-    let addr0 = addr;
-    let addr1 = addr0.inc();
-    let addr2 = addr1.inc();
-    let addr3 = addr2.inc();
-    mem.write_byte(addr0, bytes.0);
-    mem.write_byte(addr1, bytes.1);
-    mem.write_byte(addr2, bytes.2);
-    mem.write_byte(addr3, bytes.3);
-}
+        impl Mem64 for $struct {
+            fn read_doubleword(&mut self, addr: Self::Addr) -> u64 {
+                use num_traits::identities::One;
 
-/// Read a 64-bit value, using little-endianness.
-/// 
-/// Reads from this can be expected to be aligned (the bottom 3 addr bits should be 0).
-/// Unaligned reads are undefined, and might panic.
-pub fn read_doubleword<M: Memory>(mem: &mut M, addr: AddrBus<M::Width>) -> u64 {
-    let addr0 = addr;
-    let addr1 = addr0.inc();
-    let addr2 = addr1.inc();
-    let addr3 = addr2.inc();
-    let addr4 = addr3.inc();
-    let addr5 = addr4.inc();
-    let addr6 = addr5.inc();
-    let addr7 = addr6.inc();
-    let b0 = mem.read_byte(addr0);
-    let b1 = mem.read_byte(addr1);
-    let b2 = mem.read_byte(addr2);
-    let b3 = mem.read_byte(addr3);
-    let b4 = mem.read_byte(addr4);
-    let b5 = mem.read_byte(addr5);
-    let b6 = mem.read_byte(addr6);
-    let b7 = mem.read_byte(addr7);
-    make64!(b7, b6, b5, b4, b3, b2, b1, b0)
-}
+                let addr0 = addr;
+                let addr1 = addr0 + Self::Addr::one();
+                let addr2 = addr1 + Self::Addr::one();
+                let addr3 = addr2 + Self::Addr::one();
+                let addr4 = addr3 + Self::Addr::one();
+                let addr5 = addr4 + Self::Addr::one();
+                let addr6 = addr5 + Self::Addr::one();
+                let addr7 = addr6 + Self::Addr::one();
+                let b0 = self.read_byte(addr0);
+                let b1 = self.read_byte(addr1);
+                let b2 = self.read_byte(addr2);
+                let b3 = self.read_byte(addr3);
+                let b4 = self.read_byte(addr4);
+                let b5 = self.read_byte(addr5);
+                let b6 = self.read_byte(addr6);
+                let b7 = self.read_byte(addr7);
+                make64!(b7, b6, b5, b4, b3, b2, b1, b0)
+            }
 
-/// Write a 64-bit value, using little-endianness.
-/// 
-/// Writes to this can be expected to be aligned (the bottom 3 addr bits should be 0).
-/// Unaligned writes are undefined, and might panic.
-pub fn write_doubleword<M: Memory>(mem: &mut M, addr: AddrBus<M::Width>, data: u64) {
-    let bytes = bytes64!(data);
-    let addr0 = addr;
-    let addr1 = addr0.inc();
-    let addr2 = addr1.inc();
-    let addr3 = addr2.inc();
-    let addr4 = addr3.inc();
-    let addr5 = addr4.inc();
-    let addr6 = addr5.inc();
-    let addr7 = addr6.inc();
-    mem.write_byte(addr0, bytes.0);
-    mem.write_byte(addr1, bytes.1);
-    mem.write_byte(addr2, bytes.2);
-    mem.write_byte(addr3, bytes.3);
-    mem.write_byte(addr4, bytes.4);
-    mem.write_byte(addr5, bytes.5);
-    mem.write_byte(addr6, bytes.6);
-    mem.write_byte(addr7, bytes.7);
+            fn write_doubleword(&mut self, addr: Self::Addr, data: u64) {
+                use num_traits::identities::One;
+
+                let bytes = bytes64!(data);
+                let addr0 = addr;
+                let addr1 = addr0 + Self::Addr::one();
+                let addr2 = addr1 + Self::Addr::one();
+                let addr3 = addr2 + Self::Addr::one();
+                let addr4 = addr3 + Self::Addr::one();
+                let addr5 = addr4 + Self::Addr::one();
+                let addr6 = addr5 + Self::Addr::one();
+                let addr7 = addr6 + Self::Addr::one();
+                self.write_byte(addr0, bytes.0);
+                self.write_byte(addr1, bytes.1);
+                self.write_byte(addr2, bytes.2);
+                self.write_byte(addr3, bytes.3);
+                self.write_byte(addr4, bytes.4);
+                self.write_byte(addr5, bytes.5);
+                self.write_byte(addr6, bytes.6);
+                self.write_byte(addr7, bytes.7);
+            }
+        }
+    };
 }
