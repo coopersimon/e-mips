@@ -48,7 +48,7 @@ impl MIPSIInstructions for MIPSI {}
 pub trait MIPSIInstructions: MIPSICore {
     // Arithmetic
 
-    /// ADD
+    /// Add signed
     fn add(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
         let source = self.read_gp(src_reg);
         let target = self.read_gp(tgt_reg);
@@ -59,7 +59,7 @@ pub trait MIPSIInstructions: MIPSICore {
         }
     }
 
-    /// ADDI
+    /// Add immediate signed
     fn addi(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
         let source = self.read_gp(src_reg);
         let imm_32 = sign_extend_16!(imm);
@@ -70,7 +70,7 @@ pub trait MIPSIInstructions: MIPSICore {
         }
     }
 
-    /// ADDU
+    /// Add unsigned
     fn addu(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
         let source = self.read_gp(src_reg);
         let target = self.read_gp(tgt_reg);
@@ -78,7 +78,7 @@ pub trait MIPSIInstructions: MIPSICore {
         self.write_gp(dst_reg, result);
     }
 
-    /// ADDIU
+    /// Add immediate unsigned
     fn addiu(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
         let source = self.read_gp(src_reg);
         let imm_32 = sign_extend_16!(imm);
@@ -86,7 +86,7 @@ pub trait MIPSIInstructions: MIPSICore {
         self.write_gp(tgt_reg, result);
     }
 
-    /// SUB
+    /// Sub signed
     fn sub(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
         let source = self.read_gp(src_reg);
         let target = self.read_gp(tgt_reg);
@@ -97,7 +97,7 @@ pub trait MIPSIInstructions: MIPSICore {
         }
     }
 
-    /// SUBU
+    /// Sub unsigned
     fn subu(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
         let source = self.read_gp(src_reg);
         let target = self.read_gp(tgt_reg);
@@ -107,7 +107,7 @@ pub trait MIPSIInstructions: MIPSICore {
 
     // Multiplication/division
 
-    /// MULT
+    /// Multiply signed
     fn mult(&mut self, src_reg: usize, tgt_reg: usize) {
         let source = sign_extend_32!(self.read_gp(src_reg));
         let target = sign_extend_32!(self.read_gp(tgt_reg));
@@ -116,7 +116,7 @@ pub trait MIPSIInstructions: MIPSICore {
         self.write_lo(lo64!(result as u64));
     }
 
-    /// MULTU
+    /// Multiply unsigned
     fn multu(&mut self, src_reg: usize, tgt_reg: usize) {
         let source = self.read_gp(src_reg) as u64;
         let target = self.read_gp(tgt_reg) as u64;
@@ -125,7 +125,7 @@ pub trait MIPSIInstructions: MIPSICore {
         self.write_lo(lo64!(result));
     }
 
-    /// DIV
+    /// Divide signed
     fn div(&mut self, src_reg: usize, tgt_reg: usize) {
         let source = self.read_gp(src_reg) as i32;
         let target = self.read_gp(tgt_reg) as i32;
@@ -133,7 +133,7 @@ pub trait MIPSIInstructions: MIPSICore {
         self.write_lo((source / target) as u32);
     }
 
-    /// DIVU
+    /// Divide unsigned
     fn divu(&mut self, src_reg: usize, tgt_reg: usize) {
         let source = self.read_gp(src_reg);
         let target = self.read_gp(tgt_reg);
@@ -141,29 +141,29 @@ pub trait MIPSIInstructions: MIPSICore {
         self.write_lo(source / target);
     }
 
-    /// MFHI
+    /// Move from hi
     fn mfhi(&mut self, dst_reg: usize) {
         self.write_gp(dst_reg, self.read_hi());
     }
 
-    /// MTHI
+    /// Move to hi
     fn mthi(&mut self, src_reg: usize) {
         self.write_hi(self.read_gp(src_reg));
     }
 
-    /// MFLO
+    /// Move from lo
     fn mflo(&mut self, dst_reg: usize) {
         self.write_gp(dst_reg, self.read_lo());
     }
 
-    /// MTLO
+    /// Move to lo
     fn mtlo(&mut self, src_reg: usize) {
         self.write_lo(self.read_gp(src_reg));
     }
 
     // Logic
 
-    /// AND
+    /// Bitwise and
     fn and(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
         let source = self.read_gp(src_reg);
         let target = self.read_gp(tgt_reg);
@@ -171,7 +171,7 @@ pub trait MIPSIInstructions: MIPSICore {
         self.write_gp(dst_reg, result);
     }
 
-    /// ANDI
+    /// Bitwise and immediate
     fn andi(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
         let source = self.read_gp(src_reg);
         let imm_32 = imm as u32;
@@ -179,7 +179,7 @@ pub trait MIPSIInstructions: MIPSICore {
         self.write_gp(tgt_reg, result);
     }
 
-    /// OR
+    /// Bitwise or
     fn or(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
         let source = self.read_gp(src_reg);
         let target = self.read_gp(tgt_reg);
@@ -187,7 +187,7 @@ pub trait MIPSIInstructions: MIPSICore {
         self.write_gp(dst_reg, result);
     }
 
-    /// ORI
+    /// Bitwise or immediate
     fn ori(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
         let source = self.read_gp(src_reg);
         let imm_32 = imm as u32;
@@ -195,7 +195,7 @@ pub trait MIPSIInstructions: MIPSICore {
         self.write_gp(tgt_reg, result);
     }
 
-    /// XOR
+    /// Bitwise xor
     fn xor(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
         let source = self.read_gp(src_reg);
         let target = self.read_gp(tgt_reg);
@@ -203,7 +203,7 @@ pub trait MIPSIInstructions: MIPSICore {
         self.write_gp(dst_reg, result);
     }
 
-    /// XORI
+    /// Bitwise xor immediate
     fn xori(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
         let source = self.read_gp(src_reg);
         let imm_32 = imm as u32;
@@ -211,7 +211,7 @@ pub trait MIPSIInstructions: MIPSICore {
         self.write_gp(tgt_reg, result);
     }
 
-    /// NOR
+    /// Bitwise nor
     fn nor(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
         let source = self.read_gp(src_reg);
         let target = self.read_gp(tgt_reg);
@@ -264,6 +264,40 @@ pub trait MIPSIInstructions: MIPSICore {
         let target = self.read_gp(tgt_reg) as i32;
         let result = target >> source;
         self.write_gp(dst_reg, result as u32);
+    }
+
+    // Conditional sets
+
+    /// Set on less than
+    fn slt(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
+        let source = self.read_gp(src_reg) as i32;
+        let target = self.read_gp(tgt_reg) as i32;
+        let result = if source < target {1} else {0};
+        self.write_gp(dst_reg, result);
+    }
+
+    /// Set on less than unsigned
+    fn sltu(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
+        let source = self.read_gp(src_reg);
+        let target = self.read_gp(tgt_reg);
+        let result = if source < target {1} else {0};
+        self.write_gp(dst_reg, result);
+    }
+
+    /// Set on less than immediate
+    fn slti(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
+        let source = self.read_gp(src_reg) as i32;
+        let imm32 = sign_extend_16!(imm) as i32;
+        let result = if source < imm32 {1} else {0};
+        self.write_gp(tgt_reg, result);
+    }
+
+    /// Set on less than immediate unsigned
+    fn sltiu(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
+        let source = self.read_gp(src_reg);
+        let imm32 = sign_extend_16!(imm);
+        let result = if source < imm32 {1} else {0};
+        self.write_gp(tgt_reg, result);
     }
 }
 
@@ -650,5 +684,95 @@ mod test {
         cpu.write_gp(2, 0x10);
         cpu.srav(2, 1, 3);
         assert_eq!(cpu.read_gp(3), 0xFFFF_8765);
+    }
+
+    #[test]
+    fn slt() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x100);
+        cpu.write_gp(2, 0x100);
+        cpu.slt(1, 2, 3);
+        assert_eq!(cpu.read_gp(3), 0);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0xFFFF_FFFF);
+        cpu.write_gp(2, 0x100);
+        cpu.slt(1, 2, 3);
+        assert_eq!(cpu.read_gp(3), 1);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x1234);
+        cpu.write_gp(2, 0x4321);
+        cpu.slt(1, 2, 3);
+        assert_eq!(cpu.read_gp(3), 1);
+    }
+
+    #[test]
+    fn sltu() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x100);
+        cpu.write_gp(2, 0x100);
+        cpu.sltu(1, 2, 3);
+        assert_eq!(cpu.read_gp(3), 0);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0xFFFF_FFFF);
+        cpu.write_gp(2, 0x100);
+        cpu.sltu(1, 2, 3);
+        assert_eq!(cpu.read_gp(3), 0);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x1234);
+        cpu.write_gp(2, 0x4321);
+        cpu.sltu(1, 2, 3);
+        assert_eq!(cpu.read_gp(3), 1);
+    }
+
+    #[test]
+    fn slti() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x1000);
+        cpu.slti(1, 2, 0x1000);
+        assert_eq!(cpu.read_gp(2), 0);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0xFFFF_FFFF);
+        cpu.slti(1, 2, 0x1);
+        assert_eq!(cpu.read_gp(2), 1);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0xFFFF_0000);
+        cpu.slti(1, 2, 0xFFFF);
+        assert_eq!(cpu.read_gp(2), 1);
+    }
+
+    #[test]
+    fn sltiu() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x1000);
+        cpu.sltiu(1, 2, 0x1000);
+        assert_eq!(cpu.read_gp(2), 0);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0xFFFF_FFFF);
+        cpu.sltiu(1, 2, 0x1);
+        assert_eq!(cpu.read_gp(2), 0);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0xFFFF_0000);
+        cpu.sltiu(1, 2, 0xFFFF);
+        assert_eq!(cpu.read_gp(2), 1);
     }
 }
