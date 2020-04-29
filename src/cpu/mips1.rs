@@ -45,6 +45,7 @@ impl MIPSIInstructions for MIPSI {}
 /// The set of instructions defined in MIPS I.
 /// 
 /// The arguments must have been decoded prior to calling these.
+/// If a register number argument has a value greater than 31, the result is undefined.
 pub trait MIPSIInstructions: MIPSICore {
     // Arithmetic
 
@@ -298,6 +299,16 @@ pub trait MIPSIInstructions: MIPSICore {
         let imm32 = sign_extend_16!(imm);
         let result = if source < imm32 {1} else {0};
         self.write_gp(tgt_reg, result);
+    }
+
+    // Memory access
+
+    /// Load byte
+    fn lb(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
+        let base = self.read_gp(base_reg);
+        let offset32 = sign_extend_16!(offset);
+        let addr = base.wrapping_add(offset32);
+
     }
 }
 
