@@ -1,17 +1,41 @@
 use super::*;
 
+use crate::mem::{
+    Memory,
+    Mem16,
+    Mem32
+};
+
 /// Mips I processor.
-#[derive(Default)]
-pub struct MIPSI {
+pub struct MIPSI<Mem: Mem32> {
     gp_reg:     [u32; 32],
     hi:         u32,
     lo:         u32,
 
     pc:         u32,
     pc_next:    u32,
+
+    mem:        Mem
 }
 
-impl MIPSICore for MIPSI {
+impl<Mem: Mem32> MIPSI<Mem> {
+    pub fn new(mem: Mem) -> Self {
+        Self {
+            gp_reg:     [0; 32],
+            hi:         0,
+            lo:         0,
+
+            pc:         0,
+            pc_next:    0,
+
+            mem:        mem,
+        }
+    }
+}
+
+impl<Mem: Mem32<Addr = u32>> MIPSICore for MIPSI<Mem> {
+    type Mem = Mem;
+
     fn read_gp(&self, reg: usize) -> u32 {
         self.gp_reg[reg]
     }
@@ -38,15 +62,20 @@ impl MIPSICore for MIPSI {
     fn trigger_exception(&mut self, exception: Exception) {
 
     }
+
+    fn mem<'a>(&'a mut self) -> &'a mut Self::Mem {
+        &mut self.mem
+    }
 }
 
-impl MIPSIInstructions for MIPSI {}
+impl<Mem: Mem32<Addr = u32>> MIPSIInstructions<Mem> for MIPSI<Mem> {}
 
 /// The set of instructions defined in MIPS I.
 /// 
 /// The arguments must have been decoded prior to calling these.
 /// If a register number argument has a value greater than 31, the result is undefined.
-pub trait MIPSIInstructions: MIPSICore {
+pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
+    where Mem: Mem32, <Mem as Memory>::Addr: From<u32> {
     // Arithmetic
 
     /// Add signed
@@ -269,7 +298,7 @@ pub trait MIPSIInstructions: MIPSICore {
 
     // Conditional sets
 
-    /// Set on less than
+    /// Set on less than signed
     fn slt(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
         let source = self.read_gp(src_reg) as i32;
         let target = self.read_gp(tgt_reg) as i32;
@@ -285,7 +314,7 @@ pub trait MIPSIInstructions: MIPSICore {
         self.write_gp(dst_reg, result);
     }
 
-    /// Set on less than immediate
+    /// Set on less than immediate signed
     fn slti(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
         let source = self.read_gp(src_reg) as i32;
         let imm32 = sign_extend_16!(imm) as i32;
@@ -303,18 +332,52 @@ pub trait MIPSIInstructions: MIPSICore {
 
     // Memory access
 
-    /// Load byte
+    /// Load byte signed
     fn lb(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16!(offset);
         let addr = base.wrapping_add(offset32);
-
+        let byte = self.mem().read_byte(addr.into());
+        let signed_byte = sign_extend_8!(byte);
+        self.write_gp(tgt_reg, signed_byte);
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    struct LittleMemTest {
+        bytes: Vec<u8>
+    }
+
+    impl LittleMemTest {
+        fn new(size: usize) -> Self {
+            Self {
+                bytes: vec![0; size]
+            }
+        }
+    }
+
+    impl Memory for LittleMemTest {
+        type Addr = u32;
+
+        fn read_byte(&mut self, addr: Self::Addr) -> u8 {
+            self.bytes[addr as usize]
+        }
+
+        fn write_byte(&mut self, addr: Self::Addr, data: u8) {
+            self.bytes[addr as usize] = data;
+        }
+    }
+
+    impl_mem_32_little!{ LittleMemTest }
+
+    impl Default for MIPSI<LittleMemTest> {
+        fn default() -> Self {
+            Self::new(LittleMemTest::new(0x100))
+        }
+    }
 
     // TODO: make this a benchmark.
     #[test]

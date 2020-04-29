@@ -1,6 +1,8 @@
 /// The MIPS I instruction set.
 mod mips1;
 
+use crate::mem::Mem32;
+
 /// Exceptions that can trigger internally.
 pub enum Exception {
     ArithmeticOverflow = 12
@@ -12,6 +14,8 @@ pub enum Exception {
 /// - The core register access
 /// - Exception handling
 pub trait MIPSICore {
+    type Mem: Mem32;
+
     /// Read a general-purpose register.
     /// 
     /// If a read is attempted on a register that is not value 0-31,
@@ -38,4 +42,7 @@ pub trait MIPSICore {
 
     /// Trigger an exception.
     fn trigger_exception(&mut self, exception: Exception);
+
+    /// Borrow the memory bus.
+    fn mem<'a>(&'a mut self) -> &'a mut Self::Mem;
 }

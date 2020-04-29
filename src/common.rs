@@ -78,6 +78,14 @@ macro_rules! hi64 {
     };
 }
 
+// Sign-extend a 8-bit value.
+// Returns a 32-bit unsigned value.
+macro_rules! sign_extend_8 {
+    ($val:expr) => {
+        (($val as i8) as i32) as u32
+    };
+}
+
 // Sign-extend a 16-bit value.
 // Returns a 32-bit unsigned value.
 macro_rules! sign_extend_16 {
