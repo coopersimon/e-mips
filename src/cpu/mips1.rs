@@ -105,6 +105,8 @@ pub trait MIPSIInstructions: MIPSICore {
         self.write_gp(dst_reg, result);
     }
 
+    // Multiplication/division
+
     /// MULT
     fn mult(&mut self, src_reg: usize, tgt_reg: usize) {
         let source = sign_extend_32!(self.read_gp(src_reg));
@@ -158,6 +160,8 @@ pub trait MIPSIInstructions: MIPSICore {
     fn mtlo(&mut self, src_reg: usize) {
         self.write_lo(self.read_gp(src_reg));
     }
+
+    // Logic
 
     /// AND
     fn and(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
@@ -213,6 +217,53 @@ pub trait MIPSIInstructions: MIPSICore {
         let target = self.read_gp(tgt_reg);
         let result = source | target;
         self.write_gp(dst_reg, !result);
+    }
+
+    // Shifts
+    
+    /// Shift left logical
+    fn sll(&mut self, tgt_reg: usize, sh_amt: usize, dst_reg: usize) {
+        let target = self.read_gp(tgt_reg);
+        let result = target << sh_amt;
+        self.write_gp(dst_reg, result);
+    }
+
+    /// Shift right logical
+    fn srl(&mut self, tgt_reg: usize, sh_amt: usize, dst_reg: usize) {
+        let target = self.read_gp(tgt_reg);
+        let result = target >> sh_amt;
+        self.write_gp(dst_reg, result);
+    }
+
+    /// Shift right arithmetic
+    fn sra(&mut self, tgt_reg: usize, sh_amt: usize, dst_reg: usize) {
+        let target = self.read_gp(tgt_reg) as i32;
+        let result = target >> sh_amt;
+        self.write_gp(dst_reg, result as u32);
+    }
+
+    /// Shift left logical variable
+    fn sllv(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
+        let source = self.read_gp(src_reg) & 0x1F;
+        let target = self.read_gp(tgt_reg);
+        let result = target << source;
+        self.write_gp(dst_reg, result);
+    }
+
+    /// Shift right logical variable
+    fn srlv(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
+        let source = self.read_gp(src_reg) & 0x1F;
+        let target = self.read_gp(tgt_reg);
+        let result = target >> source;
+        self.write_gp(dst_reg, result);
+    }
+
+    /// Shift right arithmetic variable
+    fn srav(&mut self, src_reg: usize, tgt_reg: usize, dst_reg: usize) {
+        let source = self.read_gp(src_reg) & 0x1F;
+        let target = self.read_gp(tgt_reg) as i32;
+        let result = target >> source;
+        self.write_gp(dst_reg, result as u32);
     }
 }
 
@@ -489,5 +540,115 @@ mod test {
         cpu.write_gp(2, 0x0808_5555);
         cpu.nor(1, 2, 3);
         assert_eq!(cpu.read_gp(3), 0xB0B0_AAAA);
+    }
+
+    #[test]
+    fn sll() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x3);
+        cpu.sll(1, 8, 2);
+        assert_eq!(cpu.read_gp(2), 768);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x1234_5678);
+        cpu.sll(1, 16, 2);
+        assert_eq!(cpu.read_gp(2), 0x5678_0000);
+    }
+
+    #[test]
+    fn srl() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0xFEDC_BA98);
+        cpu.srl(1, 8, 2);
+        assert_eq!(cpu.read_gp(2), 0xFE_DCBA);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x1234_5678);
+        cpu.srl(1, 16, 2);
+        assert_eq!(cpu.read_gp(2), 0x1234);
+    }
+
+    #[test]
+    fn sra() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0xFEDC_BA98);
+        cpu.sra(1, 8, 2);
+        assert_eq!(cpu.read_gp(2), 0xFFFE_DCBA);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x1234_5678);
+        cpu.sra(1, 16, 2);
+        assert_eq!(cpu.read_gp(2), 0x1234);
+    }
+
+    #[test]
+    fn sllv() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x3);
+        cpu.write_gp(2, 0xFFFF_0001);
+        cpu.sllv(2, 1, 3);
+        assert_eq!(cpu.read_gp(3), 6);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x1234_5678);
+        cpu.write_gp(2, 0x3838_3838);
+        cpu.sllv(2, 1, 3);
+        assert_eq!(cpu.read_gp(3), 0x7800_0000);
+    }
+
+    #[test]
+    fn srlv() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x3);
+        cpu.write_gp(2, 0xFFFF_0001);
+        cpu.srlv(2, 1, 3);
+        assert_eq!(cpu.read_gp(3), 1);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x1234_5678);
+        cpu.write_gp(2, 0x3838_3838);
+        cpu.srlv(2, 1, 3);
+        assert_eq!(cpu.read_gp(3), 0x0000_0012);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x8765_4321);
+        cpu.write_gp(2, 0x10);
+        cpu.srlv(2, 1, 3);
+        assert_eq!(cpu.read_gp(3), 0x8765);
+    }
+
+    #[test]
+    fn srav() {
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x3);
+        cpu.write_gp(2, 0xFFFF_0001);
+        cpu.srav(2, 1, 3);
+        assert_eq!(cpu.read_gp(3), 1);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x1234_5678);
+        cpu.write_gp(2, 0x3838_3838);
+        cpu.srav(2, 1, 3);
+        assert_eq!(cpu.read_gp(3), 0x0000_0012);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.write_gp(1, 0x8765_4321);
+        cpu.write_gp(2, 0x10);
+        cpu.srav(2, 1, 3);
+        assert_eq!(cpu.read_gp(3), 0xFFFF_8765);
     }
 }
