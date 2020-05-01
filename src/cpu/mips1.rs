@@ -1,5 +1,6 @@
 use super::*;
 
+use crate::common::*;
 use crate::mem::{
     Memory,
     Mem16,
@@ -59,6 +60,14 @@ impl<Mem: Mem32<Addr = u32>> MIPSICore for MIPSI<Mem> {
         self.lo = val;
     }
 
+    fn link_register(&mut self, reg: usize) {
+        self.write_gp(reg, self.pc.wrapping_add(8));
+    }
+
+    fn branch(&mut self, offset: u32) {
+        self.pc_next = self.pc_next.wrapping_add(offset);
+    }
+
     fn trigger_exception(&mut self, exception: ExceptionCode) {
 
     }
@@ -92,7 +101,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Add immediate signed
     fn addi(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
         let source = self.read_gp(src_reg);
-        let imm_32 = sign_extend_16!(imm);
+        let imm_32 = sign_extend_16(imm);
         if let Some(result) = source.checked_add(imm_32) {
             self.write_gp(tgt_reg, result);
         } else {
@@ -111,7 +120,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Add immediate unsigned
     fn addiu(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
         let source = self.read_gp(src_reg);
-        let imm_32 = sign_extend_16!(imm);
+        let imm_32 = sign_extend_16(imm);
         let result = source.wrapping_add(imm_32);
         self.write_gp(tgt_reg, result);
     }
@@ -139,11 +148,11 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
 
     /// Multiply signed
     fn mult(&mut self, src_reg: usize, tgt_reg: usize) {
-        let source = sign_extend_32!(self.read_gp(src_reg));
-        let target = sign_extend_32!(self.read_gp(tgt_reg));
+        let source = sign_extend_32(self.read_gp(src_reg));
+        let target = sign_extend_32(self.read_gp(tgt_reg));
         let result = source * target;
-        self.write_hi(hi64!(result as u64));
-        self.write_lo(lo64!(result as u64));
+        self.write_hi(hi64(result as u64));
+        self.write_lo(lo64(result as u64));
     }
 
     /// Multiply unsigned
@@ -151,8 +160,8 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let source = self.read_gp(src_reg) as u64;
         let target = self.read_gp(tgt_reg) as u64;
         let result = source * target;
-        self.write_hi(hi64!(result));
-        self.write_lo(lo64!(result));
+        self.write_hi(hi64(result));
+        self.write_lo(lo64(result));
     }
 
     /// Divide signed
@@ -317,7 +326,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Set on less than immediate signed
     fn slti(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
         let source = self.read_gp(src_reg) as i32;
-        let imm32 = sign_extend_16!(imm) as i32;
+        let imm32 = sign_extend_16(imm) as i32;
         let result = if source < imm32 {1} else {0};
         self.write_gp(tgt_reg, result);
     }
@@ -325,7 +334,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Set on less than immediate unsigned
     fn sltiu(&mut self, src_reg: usize, tgt_reg: usize, imm: u16) {
         let source = self.read_gp(src_reg);
-        let imm32 = sign_extend_16!(imm);
+        let imm32 = sign_extend_16(imm);
         let result = if source < imm32 {1} else {0};
         self.write_gp(tgt_reg, result);
     }
@@ -335,16 +344,16 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Load byte signed
     fn lb(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
         let base = self.read_gp(base_reg);
-        let offset32 = sign_extend_16!(offset);
+        let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
         let byte = self.mem().read_byte(addr.into());
-        self.write_gp(tgt_reg, sign_extend_8!(byte));
+        self.write_gp(tgt_reg, sign_extend_8(byte));
     }
 
     /// Load byte unsigned
     fn lbu(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
         let base = self.read_gp(base_reg);
-        let offset32 = sign_extend_16!(offset);
+        let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
         let byte = self.mem().read_byte(addr.into());
         self.write_gp(tgt_reg, byte as u32);
@@ -353,16 +362,16 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Load halfword signed
     fn lh(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
         let base = self.read_gp(base_reg);
-        let offset32 = sign_extend_16!(offset);
+        let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
         let halfword = self.mem().read_halfword(addr.into());
-        self.write_gp(tgt_reg, sign_extend_16!(halfword));
+        self.write_gp(tgt_reg, sign_extend_16(halfword));
     }
 
     /// Load halfword unsigned
     fn lhu(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
         let base = self.read_gp(base_reg);
-        let offset32 = sign_extend_16!(offset);
+        let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
         let halfword = self.mem().read_halfword(addr.into());
         self.write_gp(tgt_reg, halfword as u32);
@@ -371,7 +380,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Load word
     fn lw(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
         let base = self.read_gp(base_reg);
-        let offset32 = sign_extend_16!(offset);
+        let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
         let word = self.mem().read_word(addr.into());
         self.write_gp(tgt_reg, word);
@@ -380,7 +389,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Load word left
     fn lwl(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
         let base = self.read_gp(base_reg);
-        let offset32 = sign_extend_16!(offset);
+        let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
 
         let word_addr = addr & 0xFFFF_FFFC;
@@ -404,7 +413,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Load word right
     fn lwr(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
         let base = self.read_gp(base_reg);
-        let offset32 = sign_extend_16!(offset);
+        let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
 
         let word_addr = addr & 0xFFFF_FFFC;
@@ -428,7 +437,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Store byte
     fn sb(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
         let base = self.read_gp(base_reg);
-        let offset32 = sign_extend_16!(offset);
+        let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
         let data = self.read_gp(tgt_reg) as u8;
         self.mem().write_byte(addr.into(), data);
@@ -437,7 +446,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Store halfword
     fn sh(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
         let base = self.read_gp(base_reg);
-        let offset32 = sign_extend_16!(offset);
+        let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
         let data = self.read_gp(tgt_reg) as u16;
         self.mem().write_halfword(addr.into(), data);
@@ -446,7 +455,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Store word
     fn sw(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
         let base = self.read_gp(base_reg);
-        let offset32 = sign_extend_16!(offset);
+        let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
         let data = self.read_gp(tgt_reg);
         self.mem().write_word(addr.into(), data);
@@ -455,7 +464,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Store word left
     fn swl(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
         let base = self.read_gp(base_reg);
-        let offset32 = sign_extend_16!(offset);
+        let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
 
         let word_addr = addr & 0xFFFF_FFFC;
@@ -479,7 +488,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Store word right
     fn swr(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
         let base = self.read_gp(base_reg);
-        let offset32 = sign_extend_16!(offset);
+        let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
 
         let word_addr = addr & 0xFFFF_FFFC;
@@ -498,5 +507,138 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let shift = byte_offset * 8;
 
         self.mem().write_word(word_addr.into(), old_word | (word << shift));
+    }
+
+    /// Load upper immediate
+    fn lui(&mut self, tgt_reg: usize, imm: u16) {
+        let upper_imm = (imm as u32) << 16;
+        self.write_gp(tgt_reg, upper_imm);
+    }
+
+    // Branch
+    
+    /// Branch if equal
+    fn beq(&mut self, src_reg: usize, tgt_reg: usize, offset: u16) {
+        let source = self.read_gp(src_reg);
+        let target = self.read_gp(tgt_reg);
+        if source == target {
+            let offset32 = sign_extend_16(offset) << 2;
+            self.branch(offset32);
+        }
+    }
+
+    /// Branch if not equal
+    fn bne(&mut self, src_reg: usize, tgt_reg: usize, offset: u16) {
+        let source = self.read_gp(src_reg);
+        let target = self.read_gp(tgt_reg);
+        if source != target {
+            let offset32 = sign_extend_16(offset) << 2;
+            self.branch(offset32);
+        }
+    }
+
+    /// Branch if greater than zero
+    fn bgtz(&mut self, src_reg: usize, offset: u16) {
+        let source = self.read_gp(src_reg) as i32;
+        if source > 0 {
+            let offset32 = sign_extend_16(offset) << 2;
+            self.branch(offset32);
+        }
+    }
+
+    /// Branch if greater than or equal to zero
+    fn bgez(&mut self, src_reg: usize, offset: u16) {
+        let source = self.read_gp(src_reg) as i32;
+        if source >= 0 {
+            let offset32 = sign_extend_16(offset) << 2;
+            self.branch(offset32);
+        }
+    }
+
+    /// Branch if greater than or equal to zero and link
+    fn bgezal(&mut self, src_reg: usize, offset: u16) {
+        self.link_register(31);
+        let source = self.read_gp(src_reg) as i32;
+        if source >= 0 {
+            let offset32 = sign_extend_16(offset) << 2;
+            self.branch(offset32);
+        }
+    }
+
+    /// Branch if less than zero
+    fn bltz(&mut self, src_reg: usize, offset: u16) {
+        let source = self.read_gp(src_reg) as i32;
+        if source < 0 {
+            let offset32 = sign_extend_16(offset) << 2;
+            self.branch(offset32);
+        }
+    }
+
+    /// Branch if less than or equal to zero
+    fn blez(&mut self, src_reg: usize, offset: u16) {
+        let source = self.read_gp(src_reg) as i32;
+        if source <= 0 {
+            let offset32 = sign_extend_16(offset) << 2;
+            self.branch(offset32);
+        }
+    }
+
+    /// Branch if less than zero and link
+    fn bltzal(&mut self, src_reg: usize, offset: u16) {
+        self.link_register(31);
+        let source = self.read_gp(src_reg) as i32;
+        if source < 0 {
+            let offset32 = sign_extend_16(offset) << 2;
+            self.branch(offset32);
+        }
+    }
+}
+
+impl<Mem> MIPSCore for MIPSI<Mem>
+    where Mem: Mem32, <Mem as Memory>::Addr: From<u32>, MIPSI<Mem>: MIPSIInstructions<Mem> {
+
+    fn step(&mut self) {
+        const fn op(instr: u32) -> u8 {
+            const MASK: u32 = 0xFC00_0000;
+            const SHIFT: usize = 26;
+            ((instr & MASK) >> SHIFT) as u8
+        }
+        const fn source(instr: u32) -> usize {
+            const MASK: u32 = 0x03E0_0000;
+            const SHIFT: usize = 21;
+            ((instr & MASK) >> SHIFT) as usize
+        }
+        const fn target(instr: u32) -> usize {
+            const MASK: u32 = 0x001F_0000;
+            const SHIFT: usize = 16;
+            ((instr & MASK) >> SHIFT) as usize
+        }
+        const fn shift_amt(instr: u32) -> usize {
+            const MASK: u32 = 0x0000_F800;
+            const SHIFT: usize = 11;
+            ((instr & MASK) >> SHIFT) as usize
+        }
+        const fn dest(instr: u32) -> usize {
+            const MASK: u32 = 0x0000_07C0;
+            const SHIFT: usize = 6;
+            ((instr & MASK) >> SHIFT) as usize
+        }
+        const fn special_op(instr: u32) -> u8 {
+            const MASK: u32 = 0x0000_003F;
+            (instr & MASK) as u8
+        }
+        const fn imm(instr: u32) -> u16 {
+            instr as u16
+        }
+
+        let pc = self.pc;
+        self.pc = self.pc_next;
+        self.pc_next = self.pc_next.wrapping_add(4);
+
+        let instruction = self.mem.read_word(pc.into());
+
+        match op(instruction) {
+            _ => self.trigger_exception(ExceptionCode::ReservedInstruction),
+        }
     }
 }

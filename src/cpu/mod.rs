@@ -22,6 +22,14 @@ pub enum ExceptionCode {
     ArithmeticOverflow  = 12
 }
 
+/// The core set of traits for a MIPS processor.
+/// 
+/// This set of traits deals with the public interface.
+pub trait MIPSCore {
+    /// Fetch, decode, and execute an instruction.
+    fn step(&mut self);
+}
+
 /// The core set of traits for the MIPS I instruction set.
 /// 
 /// This set of traits wraps:
@@ -53,6 +61,12 @@ pub trait MIPSICore {
 
     /// Write the LO register.
     fn write_lo(&mut self, val: u32);
+
+    /// Link the specified register with the return address.
+    fn link_register(&mut self, reg: usize);
+
+    /// Modify the next PC (in the case of a branch).
+    fn branch(&mut self, offset: u32);
 
     /// Trigger an exception.
     fn trigger_exception(&mut self, exception: ExceptionCode);
