@@ -1,5 +1,5 @@
 /// The MIPS I instruction set.
-mod mips1;
+pub mod mips1;
 
 use crate::mem::Mem32;
 

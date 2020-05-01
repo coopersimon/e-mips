@@ -11,7 +11,7 @@ macro_rules! impl_mem_16_little {
 
                 let lo = self.read_byte(addr);
                 let hi = self.read_byte(addr + Self::Addr::one());
-                make16!(hi, lo)
+                make16!(lo, hi)
             }
 
             fn write_halfword(&mut self, addr: Self::Addr, data: u16) {
@@ -21,6 +21,10 @@ macro_rules! impl_mem_16_little {
                 let hi = hi16!(data);
                 self.write_byte(addr, lo);
                 self.write_byte(addr + Self::Addr::one(), hi);
+            }
+
+            fn little_endian(&self) -> bool {
+                true
             }
         }
     };
@@ -45,7 +49,7 @@ macro_rules! impl_mem_32_little {
                 let b1 = self.read_byte(addr1);
                 let b2 = self.read_byte(addr2);
                 let b3 = self.read_byte(addr3);
-                make32!(b3, b2, b1, b0)
+                make32!(b0, b1, b2, b3)
             }
 
             fn write_word(&mut self, addr: Self::Addr, data: u32) {
@@ -92,7 +96,7 @@ macro_rules! impl_mem_64_little {
                 let b5 = self.read_byte(addr5);
                 let b6 = self.read_byte(addr6);
                 let b7 = self.read_byte(addr7);
-                make64!(b7, b6, b5, b4, b3, b2, b1, b0)
+                make64!(b0, b1, b2, b3, b4, b5, b6, b7)
             }
 
             fn write_doubleword(&mut self, addr: Self::Addr, data: u64) {
