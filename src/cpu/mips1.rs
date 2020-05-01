@@ -68,6 +68,11 @@ impl<Mem: Mem32<Addr = u32>> MIPSICore for MIPSI<Mem> {
         self.pc_next = self.pc.wrapping_add(offset);
     }
 
+    fn jump(&mut self, segment_addr: u32) {
+        let hi = self.pc_next & 0xF000_0000;
+        self.pc_next = hi | segment_addr;
+    }
+
     fn trigger_exception(&mut self, exception: ExceptionCode) {
 
     }
@@ -591,6 +596,32 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
             let offset32 = sign_extend_16(offset) << 2;
             self.branch(offset32);
         }
+    }
+
+    // Jump
+
+    /// Jump
+    fn j(&mut self, target: u32) {
+        self.jump(target << 2);
+    }
+
+    /// Jump and link
+    fn jal(&mut self, target: u32) {
+        self.link_register(31);
+        self.jump(target << 2);
+    }
+
+    /// Jump register
+    fn jr(&mut self, src_reg: usize) {
+        let dest = self.read_gp(src_reg);
+        self.jump(dest);
+    }
+
+    /// Jump and link register
+    fn jalr(&mut self, src_reg: usize, dst_reg: usize) {
+        self.link_register(dst_reg);
+        let dest = self.read_gp(src_reg);
+        self.jump(dest);
     }
 
     // Special
