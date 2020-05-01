@@ -338,8 +338,123 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let offset32 = sign_extend_16!(offset);
         let addr = base.wrapping_add(offset32);
         let byte = self.mem().read_byte(addr.into());
-        let signed_byte = sign_extend_8!(byte);
-        self.write_gp(tgt_reg, signed_byte);
+        self.write_gp(tgt_reg, sign_extend_8!(byte));
+    }
+
+    /// Load byte unsigned
+    fn lbu(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
+        let base = self.read_gp(base_reg);
+        let offset32 = sign_extend_16!(offset);
+        let addr = base.wrapping_add(offset32);
+        let byte = self.mem().read_byte(addr.into());
+        self.write_gp(tgt_reg, byte as u32);
+    }
+
+    /// Load halfword signed
+    fn lh(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
+        let base = self.read_gp(base_reg);
+        let offset32 = sign_extend_16!(offset);
+        let addr = base.wrapping_add(offset32);
+        let halfword = self.mem().read_halfword(addr.into());
+        self.write_gp(tgt_reg, sign_extend_16!(halfword));
+    }
+
+    /// Load halfword unsigned
+    fn lhu(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
+        let base = self.read_gp(base_reg);
+        let offset32 = sign_extend_16!(offset);
+        let addr = base.wrapping_add(offset32);
+        let halfword = self.mem().read_halfword(addr.into());
+        self.write_gp(tgt_reg, halfword as u32);
+    }
+
+    /// Load word
+    fn lw(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
+        let base = self.read_gp(base_reg);
+        let offset32 = sign_extend_16!(offset);
+        let addr = base.wrapping_add(offset32);
+        let word = self.mem().read_word(addr.into());
+        self.write_gp(tgt_reg, word);
+    }
+
+    /// Load word left
+    fn lwl(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
+        let base = self.read_gp(base_reg);
+        let offset32 = sign_extend_16!(offset);
+        let addr = base.wrapping_add(offset32);
+
+        let read_addr = addr & 0xFFFF_FFFC;
+        let byte_offset = addr & 3;
+
+        let word = self.mem().read_word(read_addr.into());
+
+        let result = if self.mem().little_endian() {
+            let old_word = match byte_offset {
+                0 => 0xFFFF_FFFF >> 8,
+                1 => 0xFFFF_FFFF >> 16,
+                2 => 0xFFFF_FFFF >> 24,
+                3 => 0,
+                _ => unreachable!()
+            } & self.read_gp(tgt_reg);
+
+            let shift = (3 - byte_offset) * 8;
+
+            old_word | (word << shift)
+        } else {
+            let old_word = match byte_offset {
+                0 => 0,
+                1 => 0xFFFF_FFFF >> 24,
+                2 => 0xFFFF_FFFF >> 16,
+                3 => 0xFFFF_FFFF >> 8,
+                _ => unreachable!()
+            } & self.read_gp(tgt_reg);
+
+            let shift = byte_offset * 8;
+
+            old_word | (word << shift)
+        };
+
+        self.write_gp(tgt_reg, result);
+    }
+
+    /// Load word right
+    fn lwr(&mut self, base_reg: usize, tgt_reg: usize, offset: u16) {
+        let base = self.read_gp(base_reg);
+        let offset32 = sign_extend_16!(offset);
+        let addr = base.wrapping_add(offset32);
+
+        let read_addr = addr & 0xFFFF_FFFC;
+        let byte_offset = addr & 3;
+
+        let word = self.mem().read_word(read_addr.into());
+
+        let result = if self.mem().little_endian() {
+            let old_word = match byte_offset {
+                0 => 0,
+                1 => 0xFFFF_FFFF << 24,
+                2 => 0xFFFF_FFFF << 16,
+                3 => 0xFFFF_FFFF << 8,
+                _ => unreachable!()
+            } & self.read_gp(tgt_reg);
+
+            let shift = byte_offset * 8;
+
+            old_word | (word >> shift)
+        } else {
+            let old_word = match byte_offset {
+                0 => 0xFFFF_FFFF << 8,
+                1 => 0xFFFF_FFFF << 16,
+                2 => 0xFFFF_FFFF << 24,
+                3 => 0,
+                _ => unreachable!()
+            } & self.read_gp(tgt_reg);
+
+            let shift = (3 - byte_offset) * 8;
+
+            old_word | (word >> shift)
+        };
+
+        self.write_gp(tgt_reg, result);
     }
 }
 
@@ -373,7 +488,7 @@ mod test {
 
     impl_mem_32_little!{ LittleMemTest }
 
-    impl Default for MIPSI<LittleMemTest> {
+    impl MIPSI<LittleMemTest> {
         fn default() -> Self {
             Self::new(LittleMemTest::new(0x100))
         }
@@ -392,14 +507,14 @@ mod test {
         let start = SystemTime::now();
         
         for _ in 0..1_000_000 {
-            cpu.add(1, 2, 1);
+            cpu.div(1, 2);
         }
 
         let time = start.elapsed().unwrap();
 
         println!("{} instructions per second.", 1_000_000.0 / time.as_secs_f64());
 
-        assert_eq!(cpu.read_gp(1), 1_000_000);
+        //assert_eq!(cpu.read_gp(1), 1_000_000);
     }
     
     #[test]
@@ -848,5 +963,142 @@ mod test {
         cpu.write_gp(1, 0xFFFF_0000);
         cpu.sltiu(1, 2, 0xFFFF);
         assert_eq!(cpu.read_gp(2), 1);
+    }
+
+    #[test]
+    fn lb() {
+        let mut cpu = MIPSI::default();
+
+        cpu.mem().write_word(0, 0x8765_4321);
+
+        cpu.write_gp(1, 0);
+        cpu.lb(1, 2, 0);
+        assert_eq!(cpu.read_gp(2), 0x21);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.mem().write_word(8, 0xFEDC_BA98);
+
+        cpu.write_gp(1, 8);
+        cpu.lb(1, 2, 3);
+        assert_eq!(cpu.read_gp(2), 0xFFFF_FFFE);
+    }
+
+    #[test]
+    fn lbu() {
+        let mut cpu = MIPSI::default();
+
+        cpu.mem().write_word(0, 0x8765_4321);
+
+        cpu.write_gp(1, 2);
+        cpu.lbu(1, 2, 0);
+        assert_eq!(cpu.read_gp(2), 0x65);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.mem().write_word(8, 0xFEDC_BA98);
+
+        cpu.write_gp(1, 8);
+        cpu.lbu(1, 2, 3);
+        assert_eq!(cpu.read_gp(2), 0xFE);
+    }
+
+    #[test]
+    fn lh() {
+        let mut cpu = MIPSI::default();
+
+        cpu.mem().write_word(0, 0x8765_4321);
+
+        cpu.write_gp(1, 0);
+        cpu.lh(1, 2, 0);
+        assert_eq!(cpu.read_gp(2), 0x4321);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.mem().write_word(8, 0xFEDC_BA98);
+
+        cpu.write_gp(1, 8);
+        cpu.lh(1, 2, 2);
+        assert_eq!(cpu.read_gp(2), 0xFFFF_FEDC);
+    }
+
+    #[test]
+    fn lhu() {
+        let mut cpu = MIPSI::default();
+
+        cpu.mem().write_word(0, 0x8765_4321);
+
+        cpu.write_gp(1, 2);
+        cpu.lhu(1, 2, 0);
+        assert_eq!(cpu.read_gp(2), 0x8765);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.mem().write_word(8, 0xFEDC_BA98);
+
+        cpu.write_gp(1, 8);
+        cpu.lhu(1, 2, 2);
+        assert_eq!(cpu.read_gp(2), 0xFEDC);
+    }
+
+    #[test]
+    fn lw() {
+        let mut cpu = MIPSI::default();
+
+        cpu.mem().write_word(0, 0x8765_4321);
+
+        cpu.write_gp(1, 0);
+        cpu.lw(1, 2, 0);
+        assert_eq!(cpu.read_gp(2), 0x8765_4321);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.mem().write_word(8, 0xFEDC_BA98);
+
+        cpu.write_gp(1, 6);
+        cpu.lw(1, 2, 2);
+        assert_eq!(cpu.read_gp(2), 0xFEDC_BA98);
+    }
+
+    #[test]
+    fn lwl() {
+        let mut cpu = MIPSI::default();
+
+        cpu.mem().write_word(0, 0x8765_4321);
+        assert_eq!(cpu.mem().read_byte(0), 0x21);
+
+        cpu.write_gp(1, 1);
+        cpu.lwl(1, 2, 0);
+        assert_eq!(cpu.read_gp(2), 0x4321_0000);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.mem().write_word(0, 0xFEDC_BA98);
+        assert_eq!(cpu.mem().read_byte(3), 0xFE);
+
+        cpu.write_gp(1, 1);
+        cpu.lwl(1, 2, 1);
+        assert_eq!(cpu.read_gp(2), 0xDCBA_9800);
+    }
+
+    #[test]
+    fn lwr() {
+        let mut cpu = MIPSI::default();
+
+        cpu.mem().write_word(0, 0x8765_4321);
+        assert_eq!(cpu.mem().read_byte(0), 0x21);
+
+        cpu.write_gp(1, 1);
+        cpu.lwr(1, 2, 0);
+        assert_eq!(cpu.read_gp(2), 0x87_6543);
+
+        let mut cpu = MIPSI::default();
+
+        cpu.mem().write_word(0, 0xFEDC_BA98);
+        assert_eq!(cpu.mem().read_byte(3), 0xFE);
+
+        cpu.write_gp(1, 1);
+        cpu.lwr(1, 2, 1);
+        assert_eq!(cpu.read_gp(2), 0x0000_FEDC);
     }
 }

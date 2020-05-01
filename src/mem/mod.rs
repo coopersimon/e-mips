@@ -57,6 +57,12 @@ pub trait Mem16: Memory {
     /// Writes to this can be expected to be aligned (the bottom addr bit should be 0).
     /// Unaligned writes are undefined, and might panic.
     fn write_halfword(&mut self, addr: Self::Addr, data: u16);
+
+    /// Check the endianness of this memory.
+    /// 
+    /// If this returns `true`, the memory is little-endian.
+    /// If this returns `false`, the memory is big-endian.
+    fn little_endian(&self) -> bool;
 }
 
 /// Memory with a 32-bit data bus.
