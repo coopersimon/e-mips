@@ -27,7 +27,7 @@ impl<Mem: Mem32> MIPSI<Mem> {
             lo:         0,
 
             pc:         0,
-            pc_next:    0,
+            pc_next:    4,
 
             mem:        mem,
         }
@@ -61,11 +61,11 @@ impl<Mem: Mem32<Addr = u32>> MIPSICore for MIPSI<Mem> {
     }
 
     fn link_register(&mut self, reg: usize) {
-        self.write_gp(reg, self.pc.wrapping_add(8));
+        self.write_gp(reg, self.pc_next);
     }
 
     fn branch(&mut self, offset: u32) {
-        self.pc_next = self.pc_next.wrapping_add(offset);
+        self.pc_next = self.pc.wrapping_add(offset);
     }
 
     fn trigger_exception(&mut self, exception: ExceptionCode) {
@@ -610,11 +610,9 @@ impl<Mem> MIPSCore for MIPSI<Mem>
     where Mem: Mem32, <Mem as Memory>::Addr: From<u32>, MIPSI<Mem>: MIPSIInstructions<Mem> {
 
     fn step(&mut self) {
-        let pc = self.pc;
+        let instr = self.mem.read_word(self.pc.into());
         self.pc = self.pc_next;
         self.pc_next = self.pc_next.wrapping_add(4);
-
-        let instr = self.mem.read_word(pc.into());
 
         let op = || -> u8 {
             const MASK: u32 = 0xFC00_0000;

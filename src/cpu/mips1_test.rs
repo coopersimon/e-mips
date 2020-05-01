@@ -1,7 +1,8 @@
 use crate::{
     mem::*,
     cpu::mips1::*,
-    cpu::MIPSICore
+    cpu::MIPSICore,
+    cpu::MIPSCore
 };
 
 struct LittleMemTest {
@@ -32,8 +33,12 @@ impl_mem_32_little!{ LittleMemTest }
 
 impl MIPSI<LittleMemTest> {
     fn default() -> Self {
-        Self::new(LittleMemTest::new(0x100))
+        Self::new(LittleMemTest::new(0x1000))
     }
+}
+
+fn make_i_instr(instr: u32, src: u32, tgt: u32, imm: u32) -> u32 {
+    (instr << 26) | (src << 21) | (tgt << 16) | imm
 }
 
 // TODO: make this a benchmark.
@@ -747,4 +752,105 @@ fn swr() {
     cpu.write_gp(1, 8);
     cpu.swr(1, 2, 2);
     assert_eq!(cpu.mem().read_word(8), 0x5678_BA98);
+}
+
+// These tests test the operation of branches, but also rely on the correct behaviour of:
+// - ADDI
+// - Step
+
+#[test]
+fn beq() {
+    let mut cpu = MIPSI::default();
+
+    cpu.mem().write_word(0, make_i_instr(0x04, 1, 2, 0x40));
+    cpu.mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
+    cpu.mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
+    cpu.mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
+    cpu.write_gp(1, 0x1234);
+    cpu.write_gp(2, 0x1234);
+
+    cpu.step();
+    cpu.step();
+    assert_eq!(cpu.read_gp(3), 0x123);
+    cpu.step();
+    assert_eq!(cpu.read_gp(4), 0x456);
+
+    let mut cpu = MIPSI::default();
+
+    cpu.mem().write_word(0, make_i_instr(0x04, 1, 2, 0x40));
+    cpu.mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
+    cpu.mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
+    cpu.mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
+    cpu.write_gp(1, 0x1234);
+    cpu.write_gp(2, 0);
+
+    cpu.step();
+    cpu.step();
+    assert_eq!(cpu.read_gp(3), 0x123);
+    cpu.step();
+    assert_eq!(cpu.read_gp(4), 0x123);
+}
+
+#[test]
+fn bgtz() {
+    let mut cpu = MIPSI::default();
+
+    cpu.mem().write_word(0, make_i_instr(0x07, 1, 0, 0x40));
+    cpu.mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
+    cpu.mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
+    cpu.mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
+    cpu.write_gp(1, 0x1234_5678);
+
+    cpu.step();
+    cpu.step();
+    assert_eq!(cpu.read_gp(3), 0x123);
+    cpu.step();
+    assert_eq!(cpu.read_gp(4), 0x456);
+
+    let mut cpu = MIPSI::default();
+
+    cpu.mem().write_word(0, make_i_instr(0x07, 1, 2, 0x40));
+    cpu.mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
+    cpu.mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
+    cpu.mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
+    cpu.write_gp(1, 0);
+
+    cpu.step();
+    cpu.step();
+    assert_eq!(cpu.read_gp(3), 0x123);
+    cpu.step();
+    assert_eq!(cpu.read_gp(4), 0x123);
+}
+
+#[test]
+fn bgezal() {
+    let mut cpu = MIPSI::default();
+
+    cpu.mem().write_word(0, make_i_instr(0x01, 1, 0x11, 0x40));
+    cpu.mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
+    cpu.mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
+    cpu.mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
+    cpu.write_gp(1, 0x1234_5678);
+
+    cpu.step();
+    assert_eq!(cpu.read_gp(31), 8);
+    cpu.step();
+    assert_eq!(cpu.read_gp(3), 0x123);
+    cpu.step();
+    assert_eq!(cpu.read_gp(4), 0x456);
+
+    let mut cpu = MIPSI::default();
+
+    cpu.mem().write_word(0, make_i_instr(0x01, 1, 0x11, 0x40));
+    cpu.mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
+    cpu.mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
+    cpu.mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
+    cpu.write_gp(1, 0xFFFF_FFFF);
+
+    cpu.step();
+    assert_eq!(cpu.read_gp(31), 8);
+    cpu.step();
+    assert_eq!(cpu.read_gp(3), 0x123);
+    cpu.step();
+    assert_eq!(cpu.read_gp(4), 0x123);
 }
