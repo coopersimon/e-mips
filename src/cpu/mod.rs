@@ -1,11 +1,25 @@
 /// The MIPS I instruction set.
 pub mod mips1;
+#[cfg(test)]
+mod mips1_test;
 
 use crate::mem::Mem32;
 
-/// Exceptions that can trigger internally.
-pub enum Exception {
-    ArithmeticOverflow = 12
+/// Exception codes.
+pub enum ExceptionCode {
+    Interrupt           = 0,
+    TLBMod              = 1,
+    TLBLoad             = 2,
+    TLBStore            = 3,
+    AddrErrorLoad       = 4,
+    AddrErrorStore      = 5,
+    InstructionBusError = 6,
+    DataBusError        = 7,
+    Syscall             = 8,
+    Breakpoint          = 9,
+    ReservedInstruction = 10,
+    CoProcUnusable      = 11,
+    ArithmeticOverflow  = 12
 }
 
 /// The core set of traits for the MIPS I instruction set.
@@ -41,7 +55,7 @@ pub trait MIPSICore {
     fn write_lo(&mut self, val: u32);
 
     /// Trigger an exception.
-    fn trigger_exception(&mut self, exception: Exception);
+    fn trigger_exception(&mut self, exception: ExceptionCode);
 
     /// Borrow the memory bus.
     fn mem<'a>(&'a mut self) -> &'a mut Self::Mem;
