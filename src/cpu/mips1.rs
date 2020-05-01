@@ -592,52 +592,138 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
             self.branch(offset32);
         }
     }
+
+    // Special
+
+    /// System call
+    fn syscall(&mut self) {
+        self.trigger_exception(ExceptionCode::Syscall);
+    }
+
+    /// Break
+    fn brk(&mut self) {
+        self.trigger_exception(ExceptionCode::Breakpoint);
+    }
 }
 
 impl<Mem> MIPSCore for MIPSI<Mem>
     where Mem: Mem32, <Mem as Memory>::Addr: From<u32>, MIPSI<Mem>: MIPSIInstructions<Mem> {
 
     fn step(&mut self) {
-        const fn op(instr: u32) -> u8 {
-            const MASK: u32 = 0xFC00_0000;
-            const SHIFT: usize = 26;
-            ((instr & MASK) >> SHIFT) as u8
-        }
-        const fn source(instr: u32) -> usize {
-            const MASK: u32 = 0x03E0_0000;
-            const SHIFT: usize = 21;
-            ((instr & MASK) >> SHIFT) as usize
-        }
-        const fn target(instr: u32) -> usize {
-            const MASK: u32 = 0x001F_0000;
-            const SHIFT: usize = 16;
-            ((instr & MASK) >> SHIFT) as usize
-        }
-        const fn shift_amt(instr: u32) -> usize {
-            const MASK: u32 = 0x0000_F800;
-            const SHIFT: usize = 11;
-            ((instr & MASK) >> SHIFT) as usize
-        }
-        const fn dest(instr: u32) -> usize {
-            const MASK: u32 = 0x0000_07C0;
-            const SHIFT: usize = 6;
-            ((instr & MASK) >> SHIFT) as usize
-        }
-        const fn special_op(instr: u32) -> u8 {
-            const MASK: u32 = 0x0000_003F;
-            (instr & MASK) as u8
-        }
-        const fn imm(instr: u32) -> u16 {
-            instr as u16
-        }
-
         let pc = self.pc;
         self.pc = self.pc_next;
         self.pc_next = self.pc_next.wrapping_add(4);
 
-        let instruction = self.mem.read_word(pc.into());
+        let instr = self.mem.read_word(pc.into());
 
-        match op(instruction) {
+        let op = || -> u8 {
+            const MASK: u32 = 0xFC00_0000;
+            const SHIFT: usize = 26;
+            ((instr & MASK) >> SHIFT) as u8
+        };
+        let source = || -> usize {
+            const MASK: u32 = 0x03E0_0000;
+            const SHIFT: usize = 21;
+            ((instr & MASK) >> SHIFT) as usize
+        };
+        let target = || -> usize {
+            const MASK: u32 = 0x001F_0000;
+            const SHIFT: usize = 16;
+            ((instr & MASK) >> SHIFT) as usize
+        };
+        let dest = || -> usize {
+            const MASK: u32 = 0x0000_F800;
+            const SHIFT: usize = 11;
+            ((instr & MASK) >> SHIFT) as usize
+        };
+        let shift_amt = || -> usize {
+            const MASK: u32 = 0x0000_07C0;
+            const SHIFT: usize = 6;
+            ((instr & MASK) >> SHIFT) as usize
+        };
+        let special_op = || -> u8 {
+            const MASK: u32 = 0x0000_003F;
+            (instr & MASK) as u8
+        };
+        let imm = || -> u16 {
+            instr as u16
+        };
+
+        match op() {
+            0 => match special_op() {
+                0x20 => self.add(source(), target(), dest()),
+                0x21 => self.addu(source(), target(), dest()),
+                0x22 => self.sub(source(), target(), dest()),
+                0x23 => self.subu(source(), target(), dest()),
+
+                0x18 => self.mult(source(), target()),
+                0x19 => self.multu(source(), target()),
+                0x1A => self.div(source(), target()),
+                0x1B => self.divu(source(), target()),
+
+                0x10 => self.mfhi(dest()),
+                0x12 => self.mflo(dest()),
+                0x11 => self.mthi(source()),
+                0x13 => self.mthi(source()),
+
+                0x24 => self.and(source(), target(), dest()),
+                0x25 => self.or(source(), target(), dest()),
+                0x26 => self.xor(source(), target(), dest()),
+                0x27 => self.nor(source(), target(), dest()),
+
+                0x00 => self.sll(target(), shift_amt(), dest()),
+                0x04 => self.sllv(source(), target(), dest()),
+                0x02 => self.srl(target(), shift_amt(), dest()),
+                0x06 => self.srlv(source(), target(), dest()),
+                0x03 => self.sra(target(), shift_amt(), dest()),
+                0x07 => self.srav(source(), target(), dest()),
+
+                0x2A => self.slt(source(), target(), dest()),
+                0x2B => self.sltu(source(), target(), dest()),
+
+                0x0C => self.syscall(),
+                0x0D => self.brk(),
+
+                _ => self.trigger_exception(ExceptionCode::ReservedInstruction),
+            },
+            // Immediate instructions
+            0x08 => self.addi(source(), target(), imm()),
+            0x09 => self.addiu(source(), target(), imm()),
+
+            0x0C => self.andi(source(), target(), imm()),
+            0x0D => self.ori(source(), target(), imm()),
+            0x0E => self.xori(source(), target(), imm()),
+
+            0x0A => self.slti(source(), target(), imm()),
+            0x0B => self.sltiu(source(), target(), imm()),
+
+            0x04 => self.beq(source(), target(), imm()),
+            0x05 => self.bne(source(), target(), imm()),
+            0x06 => self.blez(source(), imm()),
+            0x07 => self.bgtz(source(), imm()),
+            0x01 => match target() {
+                0x00 => self.bltz(source(), imm()),
+                0x01 => self.bgez(source(), imm()),
+                0x10 => self.bltzal(source(), imm()),
+                0x11 => self.bgezal(source(), imm()),
+                _ => self.trigger_exception(ExceptionCode::ReservedInstruction),
+            },
+
+            0x20 => self.lb(source(), target(), imm()),
+            0x24 => self.lbu(source(), target(), imm()),
+            0x21 => self.lh(source(), target(), imm()),
+            0x25 => self.lhu(source(), target(), imm()),
+            0x23 => self.lw(source(), target(), imm()),
+            0x22 => self.lwl(source(), target(), imm()),
+            0x26 => self.lwr(source(), target(), imm()),
+
+            0x28 => self.sb(source(), target(), imm()),
+            0x29 => self.sh(source(), target(), imm()),
+            0x2B => self.sw(source(), target(), imm()),
+            0x2A => self.swl(source(), target(), imm()),
+            0x2E => self.swr(source(), target(), imm()),
+
+            0x0F => self.lui(target(), imm()),
             _ => self.trigger_exception(ExceptionCode::ReservedInstruction),
         }
     }
