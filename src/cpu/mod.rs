@@ -1,7 +1,5 @@
 /// The MIPS I instruction set.
 pub mod mips1;
-#[cfg(test)]
-mod mips1_test;
 
 use crate::mem::Mem32;
 use crate::coproc::Coprocessor;
