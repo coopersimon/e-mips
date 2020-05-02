@@ -4,6 +4,7 @@ pub mod mips1;
 mod mips1_test;
 
 use crate::mem::Mem32;
+use crate::coproc::Coprocessor;
 
 /// Exception codes.
 pub enum ExceptionCode {
@@ -36,7 +37,16 @@ pub trait MIPSCore {
 /// - The core register access
 /// - Exception handling
 pub trait MIPSICore {
+    /// The memory bus.
     type Mem: Mem32;
+    /// The type for Coprocessor 0.
+    type Coproc0: Coprocessor;
+    /// The type for Coprocessor 1.
+    type Coproc1: Coprocessor;
+    /// The type for Coprocessor 2.
+    type Coproc2: Coprocessor;
+    /// The type for Coprocessor 3.
+    type Coproc3: Coprocessor;
 
     /// Read a general-purpose register.
     /// 
@@ -76,4 +86,13 @@ pub trait MIPSICore {
 
     /// Borrow the memory bus.
     fn mem<'a>(&'a mut self) -> &'a mut Self::Mem;
+
+    /// Borrow coprocessor 0.
+    fn coproc_0<'a>(&'a mut self) -> &'a mut Self::Coproc0;
+    /// Borrow coprocessor 1.
+    fn coproc_1<'a>(&'a mut self) -> &'a mut Self::Coproc1;
+    /// Borrow coprocessor 2.
+    fn coproc_2<'a>(&'a mut self) -> &'a mut Self::Coproc2;
+    /// Borrow coprocessor 3.
+    fn coproc_3<'a>(&'a mut self) -> &'a mut Self::Coproc3;
 }

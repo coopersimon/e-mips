@@ -1,6 +1,7 @@
 use super::*;
 
 use crate::common::*;
+use crate::coproc::*;
 use crate::mem::{
     Memory,
     Mem16,
@@ -8,7 +9,13 @@ use crate::mem::{
 };
 
 /// Mips I processor.
-pub struct MIPSI<Mem: Mem32> {
+pub struct MIPSI<
+    Mem: Mem32,
+    C0: Coprocessor,
+    C1: Coprocessor,
+    C2: Coprocessor,
+    C3: Coprocessor
+> {
     gp_reg:     [u32; 32],
     hi:         u32,
     lo:         u32,
@@ -16,11 +23,23 @@ pub struct MIPSI<Mem: Mem32> {
     pc:         u32,
     pc_next:    u32,
 
-    mem:        Mem
+    mem:        Box<Mem>,
+
+    coproc0:    C0,
+    coproc1:    C1,
+    coproc2:    C2,
+    coproc3:    C3
 }
 
-impl<Mem: Mem32> MIPSI<Mem> {
-    pub fn new(mem: Mem) -> Self {
+impl<
+    Mem: Mem32,
+    C0: Coprocessor,
+    C1: Coprocessor,
+    C2: Coprocessor,
+    C3: Coprocessor
+> MIPSI<Mem, C0, C1, C2, C3> {
+    /// Make a new MIPS I processor.
+    fn new(mem: Box<Mem>, coproc0: C0, coproc1: C1, coproc2: C2, coproc3: C3) -> Self {
         Self {
             gp_reg:     [0; 32],
             hi:         0,
@@ -30,12 +49,99 @@ impl<Mem: Mem32> MIPSI<Mem> {
             pc_next:    4,
 
             mem:        mem,
+
+            coproc0:    coproc0,
+            coproc1:    coproc1,
+            coproc2:    coproc2,
+            coproc3:    coproc3,
         }
+    }
+
+    pub fn with_memory(mem: Box<Mem>) -> MIPSIBuilder<Mem, C0, C1, C2, C3> {
+        MIPSIBuilder::new(mem)
     }
 }
 
-impl<Mem: Mem32<Addr = u32>> MIPSICore for MIPSI<Mem> {
+//
+pub struct MIPSIBuilder<
+    Mem: Mem32,
+    C0: Coprocessor,
+    C1: Coprocessor,
+    C2: Coprocessor,
+    C3: Coprocessor
+> {
+    mem:        Box<Mem>,
+
+    coproc0:    Option<C0>,
+    coproc1:    Option<C1>,
+    coproc2:    Option<C2>,
+    coproc3:    Option<C3>,
+}
+
+impl<
+    Mem: Mem32,
+    C0In: Coprocessor,
+    C1In: Coprocessor,
+    C2In: Coprocessor,
+    C3In: Coprocessor
+> MIPSIBuilder<Mem, C0In, C1In, C2In, C3In> {
+    fn new(mem: Box<Mem>) -> Self {
+        Self {
+            mem:        mem,
+            coproc0:    None,
+            coproc1:    None,
+            coproc2:    None,
+            coproc3:    None,
+        }
+    }
+
+    pub fn add_coproc0(mut self, coproc0: C0In) -> Self {
+        self.coproc0 = Some(coproc0);
+        self
+    }
+
+    pub fn add_coproc1(mut self, coproc1: C1In) -> Self {
+        self.coproc1 = Some(coproc1);
+        self
+    }
+
+    pub fn add_coproc2(mut self, coproc2: C2In) -> Self {
+        self.coproc2 = Some(coproc2);
+        self
+    }
+
+    pub fn add_coproc3(mut self, coproc3: C3In) -> Self {
+        self.coproc3 = Some(coproc3);
+        self
+    }
+
+    pub fn build<
+        C0Out: Coprocessor + From<C0In> + From<EmptyCoproc>,
+        C1Out: Coprocessor + From<C1In> + From<EmptyCoproc>,
+        C2Out: Coprocessor + From<C2In> + From<EmptyCoproc>,
+        C3Out: Coprocessor + From<C3In> + From<EmptyCoproc>
+    >(self) -> MIPSI<Mem, C0Out, C1Out, C2Out, C3Out> {
+        let coproc0 = if let Some(c0) = self.coproc0 {c0.into()} else {EmptyCoproc{}.into()};
+        let coproc1 = if let Some(c1) = self.coproc1 {c1.into()} else {EmptyCoproc{}.into()};
+        let coproc2 = if let Some(c2) = self.coproc2 {c2.into()} else {EmptyCoproc{}.into()};
+        let coproc3 = if let Some(c3) = self.coproc3 {c3.into()} else {EmptyCoproc{}.into()};
+
+        MIPSI::new(self.mem, coproc0, coproc1, coproc2, coproc3)
+    }
+}
+
+impl<
+    Mem: Mem32<Addr = u32>,
+    C0: Coprocessor,
+    C1: Coprocessor,
+    C2: Coprocessor,
+    C3: Coprocessor
+> MIPSICore for MIPSI<Mem, C0, C1, C2, C3> {
     type Mem = Mem;
+    type Coproc0 = C0;
+    type Coproc1 = C1;
+    type Coproc2 = C2;
+    type Coproc3 = C3;
 
     fn read_gp(&self, reg: usize) -> u32 {
         self.gp_reg[reg]
@@ -80,9 +186,31 @@ impl<Mem: Mem32<Addr = u32>> MIPSICore for MIPSI<Mem> {
     fn mem<'a>(&'a mut self) -> &'a mut Self::Mem {
         &mut self.mem
     }
+
+    fn coproc_0<'a>(&'a mut self) -> &'a mut Self::Coproc0 {
+        &mut self.coproc0
+    }
+
+    fn coproc_1<'a>(&'a mut self) -> &'a mut Self::Coproc1 {
+        &mut self.coproc1
+    }
+
+    fn coproc_2<'a>(&'a mut self) -> &'a mut Self::Coproc2 {
+        &mut self.coproc2
+    }
+
+    fn coproc_3<'a>(&'a mut self) -> &'a mut Self::Coproc3 {
+        &mut self.coproc3
+    }
 }
 
-impl<Mem: Mem32<Addr = u32>> MIPSIInstructions<Mem> for MIPSI<Mem> {}
+impl<
+    Mem: Mem32<Addr = u32>,
+    C0: Coprocessor,
+    C1: Coprocessor,
+    C2: Coprocessor,
+    C3: Coprocessor
+> MIPSIInstructions<Mem> for MIPSI<Mem, C0, C1, C2, C3> {}
 
 /// The set of instructions defined in MIPS I.
 /// 
@@ -635,10 +763,18 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     fn brk(&mut self) {
         self.trigger_exception(ExceptionCode::Breakpoint);
     }
+
+    // Coprocessor
 }
 
-impl<Mem> MIPSCore for MIPSI<Mem>
-    where Mem: Mem32, <Mem as Memory>::Addr: From<u32>, MIPSI<Mem>: MIPSIInstructions<Mem> {
+impl<
+    Mem: Mem32,
+    C0: Coprocessor,
+    C1: Coprocessor,
+    C2: Coprocessor,
+    C3: Coprocessor
+> MIPSCore for MIPSI<Mem, C0, C1, C2, C3>
+    where <Mem as Memory>::Addr: From<u32>, MIPSI<Mem, C0, C1, C2, C3>: MIPSIInstructions<Mem> {
 
     fn step(&mut self) {
         let instr = self.mem.read_word(self.pc.into());
@@ -677,6 +813,10 @@ impl<Mem> MIPSCore for MIPSI<Mem>
         let imm = || -> u16 {
             instr as u16
         };
+        let jump_target = || -> u32 {
+            const MASK: u32 = 0x03FF_FFFF;
+            instr & MASK
+        };
 
         match op() {
             0 => match special_op() {
@@ -709,6 +849,9 @@ impl<Mem> MIPSCore for MIPSI<Mem>
 
                 0x2A => self.slt(source(), target(), dest()),
                 0x2B => self.sltu(source(), target(), dest()),
+
+                0x08 => self.jr(source()),
+                0x09 => self.jalr(source(), dest()),
 
                 0x0C => self.syscall(),
                 0x0D => self.brk(),
@@ -753,6 +896,11 @@ impl<Mem> MIPSCore for MIPSI<Mem>
             0x2E => self.swr(source(), target(), imm()),
 
             0x0F => self.lui(target(), imm()),
+
+            // Jump instructions
+            0x02 => self.j(jump_target()),
+            0x03 => self.jal(jump_target()),
+
             _ => self.trigger_exception(ExceptionCode::ReservedInstruction),
         }
     }
