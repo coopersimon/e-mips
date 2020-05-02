@@ -553,11 +553,102 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     }
 
     // Coprocessor
+
+    /// Move register to coprocessor
+    fn mtcz(&mut self, coproc: Coproc, tgt_reg: usize, cop_reg: usize) {
+        let val = self.read_gp(tgt_reg);
+        match coproc {
+            Coproc::_0 => if let Some(cop) = self.coproc_0() {cop.move_to_reg(cop_reg, val)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+            Coproc::_1 => if let Some(cop) = self.coproc_1() {cop.move_to_reg(cop_reg, val)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+            Coproc::_2 => if let Some(cop) = self.coproc_2() {cop.move_to_reg(cop_reg, val)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+            Coproc::_3 => if let Some(cop) = self.coproc_3() {cop.move_to_reg(cop_reg, val)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+        }
+    }
+
+    /// Move register from coprocessor
+    fn mfcz(&mut self, coproc: Coproc, tgt_reg: usize, cop_reg: usize) {
+        if let Some(val) = match coproc {
+            Coproc::_0 => self.coproc_0().map(|cop| cop.move_from_reg(cop_reg)),
+            Coproc::_1 => self.coproc_1().map(|cop| cop.move_from_reg(cop_reg)),
+            Coproc::_2 => self.coproc_2().map(|cop| cop.move_from_reg(cop_reg)),
+            Coproc::_3 => self.coproc_3().map(|cop| cop.move_from_reg(cop_reg))
+        } {
+            self.write_gp(tgt_reg, val);
+        } else {
+            self.trigger_exception(ExceptionCode::CoProcUnusable);
+        }
+    }
+
+    /// Move control to coprocessor
+    fn ctcz(&mut self, coproc: Coproc, tgt_reg: usize, ctrl_reg: usize) {
+        let val = self.read_gp(tgt_reg);
+        match coproc {
+            Coproc::_0 => unreachable!(),
+            Coproc::_1 => if let Some(cop) = self.coproc_1() {cop.move_to_control(ctrl_reg, val)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+            Coproc::_2 => if let Some(cop) = self.coproc_2() {cop.move_to_control(ctrl_reg, val)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+            Coproc::_3 => if let Some(cop) = self.coproc_3() {cop.move_to_control(ctrl_reg, val)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+        }
+    }
+
+    /// Move control from coprocessor
+    fn cfcz(&mut self, coproc: Coproc, tgt_reg: usize, ctrl_reg: usize) {
+        if let Some(val) = match coproc {
+            Coproc::_0 => unreachable!(),
+            Coproc::_1 => self.coproc_1().map(|cop| cop.move_from_control(ctrl_reg)),
+            Coproc::_2 => self.coproc_2().map(|cop| cop.move_from_control(ctrl_reg)),
+            Coproc::_3 => self.coproc_3().map(|cop| cop.move_from_control(ctrl_reg))
+        } {
+            self.write_gp(tgt_reg, val);
+        } else {
+            self.trigger_exception(ExceptionCode::CoProcUnusable);
+        }
+    }
+
+    /// Load word into coprocessor
+    fn lwcz(&mut self, coproc: Coproc, base_reg: usize, cop_reg: usize, offset: u16) {
+        let base = self.read_gp(base_reg);
+        let offset32 = sign_extend_16(offset);
+        let addr = base.wrapping_add(offset32);
+        let data = self.mem().read_word(addr.into());
+        match coproc {
+            Coproc::_0 => unreachable!(),
+            Coproc::_1 => if let Some(cop) = self.coproc_1() {cop.move_to_reg(cop_reg, data)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+            Coproc::_2 => if let Some(cop) = self.coproc_2() {cop.move_to_reg(cop_reg, data)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+            Coproc::_3 => if let Some(cop) = self.coproc_3() {cop.move_to_reg(cop_reg, data)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+        }
+    }
+
+    /// Store word from coprocessor
+    fn swcz(&mut self, coproc: Coproc, base_reg: usize, cop_reg: usize, offset: u16) {
+        if let Some(data) = match coproc {
+            Coproc::_0 => unreachable!(),
+            Coproc::_1 => self.coproc_1().map(|cop| cop.move_from_reg(cop_reg)),
+            Coproc::_2 => self.coproc_2().map(|cop| cop.move_from_reg(cop_reg)),
+            Coproc::_3 => self.coproc_3().map(|cop| cop.move_from_reg(cop_reg))
+        } {
+            let base = self.read_gp(base_reg);
+            let offset32 = sign_extend_16(offset);
+            let addr = base.wrapping_add(offset32);
+            self.mem().write_word(addr.into(), data);
+        } else {
+            self.trigger_exception(ExceptionCode::CoProcUnusable);
+        }
+    }
+
+    /// Coprocessor operation
+    fn copz(&mut self, coproc: Coproc, cofun: u32) {
+        match coproc {
+            Coproc::_0 => if let Some(cop) = self.coproc_0() {cop.operation(cofun)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+            Coproc::_1 => if let Some(cop) = self.coproc_1() {cop.operation(cofun)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+            Coproc::_2 => if let Some(cop) = self.coproc_2() {cop.operation(cofun)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+            Coproc::_3 => if let Some(cop) = self.coproc_3() {cop.operation(cofun)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+        }
+    }
 }
 
 impl<
     Mem: Mem32,
-    C0: Coprocessor,
+    C0: Coprocessor0,
     C1: Coprocessor,
     C2: Coprocessor,
     C3: Coprocessor
@@ -603,6 +694,10 @@ impl<
         };
         let jump_target = || -> u32 {
             const MASK: u32 = 0x03FF_FFFF;
+            instr & MASK
+        };
+        let cofun = || -> u32 {
+            const MASK: u32 = 0x01FF_FFFF;
             instr & MASK
         };
 
@@ -688,6 +783,45 @@ impl<
             // Jump instructions
             0x02 => self.j(jump_target()),
             0x03 => self.jal(jump_target()),
+
+            // Coprocessor
+            0x10 => match source() {
+                0x00 => self.mfcz(Coproc::_0, target(), dest()),
+                0x04 => self.mtcz(Coproc::_0, target(), dest()),
+                0x10 => self.copz(Coproc::_0, cofun()),
+                _ => self.trigger_exception(ExceptionCode::ReservedInstruction),
+            },
+            0x11 => match source() {
+                0x00 => self.mfcz(Coproc::_1, target(), dest()),
+                0x02 => self.cfcz(Coproc::_1, target(), dest()),
+                0x04 => self.mtcz(Coproc::_1, target(), dest()),
+                0x06 => self.ctcz(Coproc::_1, target(), dest()),
+                0x10 => self.copz(Coproc::_1, cofun()),
+                _ => self.trigger_exception(ExceptionCode::ReservedInstruction),
+            },
+            0x12 => match source() {
+                0x00 => self.mfcz(Coproc::_2, target(), dest()),
+                0x02 => self.cfcz(Coproc::_2, target(), dest()),
+                0x04 => self.mtcz(Coproc::_2, target(), dest()),
+                0x06 => self.ctcz(Coproc::_2, target(), dest()),
+                0x10 => self.copz(Coproc::_2, cofun()),
+                _ => self.trigger_exception(ExceptionCode::ReservedInstruction),
+            },
+            0x13 => match source() {
+                0x00 => self.mfcz(Coproc::_3, target(), dest()),
+                0x02 => self.cfcz(Coproc::_3, target(), dest()),
+                0x04 => self.mtcz(Coproc::_3, target(), dest()),
+                0x06 => self.ctcz(Coproc::_3, target(), dest()),
+                0x10 => self.copz(Coproc::_3, cofun()),
+                _ => self.trigger_exception(ExceptionCode::ReservedInstruction),
+            },
+            0x31 => self.lwcz(Coproc::_1, source(), target(), imm()),
+            0x32 => self.lwcz(Coproc::_2, source(), target(), imm()),
+            0x33 => self.lwcz(Coproc::_3, source(), target(), imm()),
+
+            0x39 => self.swcz(Coproc::_1, source(), target(), imm()),
+            0x3A => self.swcz(Coproc::_2, source(), target(), imm()),
+            0x3B => self.swcz(Coproc::_3, source(), target(), imm()),
 
             _ => self.trigger_exception(ExceptionCode::ReservedInstruction),
         }

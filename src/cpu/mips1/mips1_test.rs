@@ -53,10 +53,17 @@ impl Coprocessor for TestCoproc {
         self.control_reg[reg] = val;
     }
 
+    fn load_from_mem(&mut self, reg: usize, val: u32) {
+        self.move_to_reg(reg, val);
+    }
+    fn store_to_mem(&mut self, reg: usize) -> u32 {
+        self.move_from_reg(reg)
+    }
+
     fn operation(&mut self, op: u32) {}
 }
 
-impl MIPSI<LittleMemTest, EmptyCoproc, TestCoproc, EmptyCoproc, EmptyCoproc> {
+impl MIPSI<LittleMemTest, EmptyCoproc0, TestCoproc, EmptyCoproc, EmptyCoproc> {
     fn default() -> Self {
         Self::with_memory(Box::new(LittleMemTest::new(0x1000)))
             .add_coproc1(TestCoproc::default())

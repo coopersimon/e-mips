@@ -2,7 +2,10 @@
 pub mod mips1;
 
 use crate::mem::Mem32;
-use crate::coproc::Coprocessor;
+use crate::coproc::{
+    Coprocessor0,
+    Coprocessor
+};
 
 /// Exception codes.
 pub enum ExceptionCode {
@@ -19,6 +22,16 @@ pub enum ExceptionCode {
     ReservedInstruction = 10,
     CoProcUnusable      = 11,
     ArithmeticOverflow  = 12
+}
+
+/// Coprocessor number.
+/// 
+/// Used for internal coprocessor indexing.
+pub enum Coproc {
+    _0,
+    _1,
+    _2,
+    _3
 }
 
 /// The core set of traits for a MIPS processor.
@@ -38,7 +51,7 @@ pub trait MIPSICore {
     /// The memory bus.
     type Mem: Mem32;
     /// The type for Coprocessor 0.
-    type Coproc0: Coprocessor;
+    type Coproc0: Coprocessor0;
     /// The type for Coprocessor 1.
     type Coproc1: Coprocessor;
     /// The type for Coprocessor 2.
@@ -86,11 +99,11 @@ pub trait MIPSICore {
     fn mem<'a>(&'a mut self) -> &'a mut Self::Mem;
 
     /// Borrow coprocessor 0.
-    fn coproc_0<'a>(&'a mut self) -> &'a mut Self::Coproc0;
+    fn coproc_0<'a>(&'a mut self) -> Option<&'a mut Self::Coproc0>;
     /// Borrow coprocessor 1.
-    fn coproc_1<'a>(&'a mut self) -> &'a mut Self::Coproc1;
+    fn coproc_1<'a>(&'a mut self) -> Option<&'a mut Self::Coproc1>;
     /// Borrow coprocessor 2.
-    fn coproc_2<'a>(&'a mut self) -> &'a mut Self::Coproc2;
+    fn coproc_2<'a>(&'a mut self) -> Option<&'a mut Self::Coproc2>;
     /// Borrow coprocessor 3.
-    fn coproc_3<'a>(&'a mut self) -> &'a mut Self::Coproc3;
+    fn coproc_3<'a>(&'a mut self) -> Option<&'a mut Self::Coproc3>;
 }
