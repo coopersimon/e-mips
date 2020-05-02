@@ -1,4 +1,5 @@
 use crate::{
+    coproc::*,
     mem::*,
     cpu::mips1::*,
     cpu::MIPSICore,
@@ -31,9 +32,41 @@ impl Memory for LittleMemTest {
 
 impl_mem_32_little!{ LittleMemTest }
 
-impl MIPSI<LittleMemTest> {
+#[derive(Default)]
+struct TestCoproc {
+    control_reg:    [u32; 32],
+    data_reg:       [u32; 32],
+}
+
+impl From<EmptyCoproc> for TestCoproc {
+    fn from(_: EmptyCoproc) -> Self {
+        Self::default()
+    }
+}
+
+impl Coprocessor for TestCoproc {
+    fn move_from_reg(&mut self, reg: usize) -> u32 {
+        self.data_reg[reg]
+    }
+    fn move_to_reg(&mut self, reg: usize, val: u32) {
+        self.data_reg[reg] = val;
+    }
+
+    fn move_from_control(&mut self, reg: usize) -> u32 {
+        self.control_reg[reg]
+    }
+    fn move_to_control(&mut self, reg: usize, val: u32) {
+        self.control_reg[reg] = val;
+    }
+
+    fn operation(&mut self, op: u32) {}
+}
+
+impl MIPSI<LittleMemTest, EmptyCoproc, TestCoproc, EmptyCoproc, EmptyCoproc> {
     fn default() -> Self {
-        Self::new(LittleMemTest::new(0x1000))
+        Self::with_memory(Box::new(LittleMemTest::new(0x1000)))
+            .add_coproc1(TestCoproc::default())
+            .build()
     }
 }
 
