@@ -31,7 +31,7 @@ pub struct MIPSI<
 
     mem:        Box<Mem>,
 
-    coproc0:    Option<C0>,
+    coproc0:    C0,
     coproc1:    Option<C1>,
     coproc2:    Option<C2>,
     coproc3:    Option<C3>
@@ -45,7 +45,7 @@ impl<
     C3: Coprocessor
 > MIPSI<Mem, C0, C1, C2, C3> {
     /// Make a new MIPS I processor.
-    fn new(mem: Box<Mem>, coproc0: Option<C0>, coproc1: Option<C1>, coproc2: Option<C2>, coproc3: Option<C3>) -> Self {
+    fn new(mem: Box<Mem>, coproc0: C0, coproc1: Option<C1>, coproc2: Option<C2>, coproc3: Option<C3>) -> Self {
         Self {
             gp_reg:     [0; 32],
             hi:         0,
@@ -82,7 +82,7 @@ pub struct MIPSIBuilder<
 > {
     mem:        Box<Mem>,
 
-    coproc0:    Option<C0>,
+    coproc0:    C0,
     coproc1:    Option<C1>,
     coproc2:    Option<C2>,
     coproc3:    Option<C3>,
@@ -98,7 +98,7 @@ impl<
     fn new(mem: Box<Mem>) -> MIPSIBuilder<Mem, EmptyCoproc0, EmptyCoproc, EmptyCoproc, EmptyCoproc> {
         MIPSIBuilder {
             mem:        mem,
-            coproc0:    None,
+            coproc0:    EmptyCoproc0{},
             coproc1:    None,
             coproc2:    None,
             coproc3:    None,
@@ -109,7 +109,7 @@ impl<
     pub fn add_coproc0<NewC0: Coprocessor0>(self, coproc0: NewC0) -> MIPSIBuilder<Mem, NewC0, C1, C2, C3> {
         MIPSIBuilder {
             mem:        self.mem,
-            coproc0:    Some(coproc0),
+            coproc0:    coproc0,
             coproc1:    self.coproc1,
             coproc2:    self.coproc2,
             coproc3:    self.coproc3,
@@ -212,8 +212,8 @@ impl<
         &mut self.mem
     }
 
-    fn coproc_0<'a>(&'a mut self) -> Option<&'a mut Self::Coproc0> {
-        (&mut self.coproc0).as_mut()
+    fn coproc_0<'a>(&'a mut self) -> &'a mut Self::Coproc0 {
+        &mut self.coproc0
     }
 
     fn coproc_1<'a>(&'a mut self) -> Option<&'a mut Self::Coproc1> {

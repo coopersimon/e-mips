@@ -558,7 +558,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     fn mtcz(&mut self, coproc: Coproc, tgt_reg: usize, cop_reg: usize) {
         let val = self.read_gp(tgt_reg);
         match coproc {
-            Coproc::_0 => if let Some(cop) = self.coproc_0() {cop.move_to_reg(cop_reg, val)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+            Coproc::_0 => self.coproc_0().move_to_reg(cop_reg, val),
             Coproc::_1 => if let Some(cop) = self.coproc_1() {cop.move_to_reg(cop_reg, val)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
             Coproc::_2 => if let Some(cop) = self.coproc_2() {cop.move_to_reg(cop_reg, val)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
             Coproc::_3 => if let Some(cop) = self.coproc_3() {cop.move_to_reg(cop_reg, val)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
@@ -568,7 +568,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Move register from coprocessor
     fn mfcz(&mut self, coproc: Coproc, tgt_reg: usize, cop_reg: usize) {
         if let Some(val) = match coproc {
-            Coproc::_0 => self.coproc_0().map(|cop| cop.move_from_reg(cop_reg)),
+            Coproc::_0 => Some(self.coproc_0().move_from_reg(cop_reg)),
             Coproc::_1 => self.coproc_1().map(|cop| cop.move_from_reg(cop_reg)),
             Coproc::_2 => self.coproc_2().map(|cop| cop.move_from_reg(cop_reg)),
             Coproc::_3 => self.coproc_3().map(|cop| cop.move_from_reg(cop_reg))
@@ -638,7 +638,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     /// Coprocessor operation
     fn copz(&mut self, coproc: Coproc, cofun: u32) {
         match coproc {
-            Coproc::_0 => if let Some(cop) = self.coproc_0() {cop.operation(cofun)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
+            Coproc::_0 => self.coproc_0().operation(cofun),
             Coproc::_1 => if let Some(cop) = self.coproc_1() {cop.operation(cofun)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
             Coproc::_2 => if let Some(cop) = self.coproc_2() {cop.operation(cofun)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
             Coproc::_3 => if let Some(cop) = self.coproc_3() {cop.operation(cofun)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
@@ -788,7 +788,7 @@ impl<
             0x10 => match source() {
                 0x00 => self.mfcz(Coproc::_0, target(), dest()),
                 0x04 => self.mtcz(Coproc::_0, target(), dest()),
-                0x10 => self.copz(Coproc::_0, cofun()),
+                x if (x & 0x10) == 0x10 => self.copz(Coproc::_0, cofun()),
                 _ => self.trigger_exception(ExceptionCode::ReservedInstruction),
             },
             0x11 => match source() {
@@ -796,7 +796,7 @@ impl<
                 0x02 => self.cfcz(Coproc::_1, target(), dest()),
                 0x04 => self.mtcz(Coproc::_1, target(), dest()),
                 0x06 => self.ctcz(Coproc::_1, target(), dest()),
-                0x10 => self.copz(Coproc::_1, cofun()),
+                x if (x & 0x10) == 0x10 => self.copz(Coproc::_1, cofun()),
                 _ => self.trigger_exception(ExceptionCode::ReservedInstruction),
             },
             0x12 => match source() {
@@ -804,7 +804,7 @@ impl<
                 0x02 => self.cfcz(Coproc::_2, target(), dest()),
                 0x04 => self.mtcz(Coproc::_2, target(), dest()),
                 0x06 => self.ctcz(Coproc::_2, target(), dest()),
-                0x10 => self.copz(Coproc::_2, cofun()),
+                x if (x & 0x10) == 0x10 => self.copz(Coproc::_2, cofun()),
                 _ => self.trigger_exception(ExceptionCode::ReservedInstruction),
             },
             0x13 => match source() {
@@ -812,7 +812,7 @@ impl<
                 0x02 => self.cfcz(Coproc::_3, target(), dest()),
                 0x04 => self.mtcz(Coproc::_3, target(), dest()),
                 0x06 => self.ctcz(Coproc::_3, target(), dest()),
-                0x10 => self.copz(Coproc::_3, cofun()),
+                x if (x & 0x10) == 0x10 => self.copz(Coproc::_3, cofun()),
                 _ => self.trigger_exception(ExceptionCode::ReservedInstruction),
             },
             0x31 => self.lwcz(Coproc::_1, source(), target(), imm()),
