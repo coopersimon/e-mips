@@ -60,7 +60,16 @@ impl Coprocessor for TestCoproc {
         self.move_from_reg(reg)
     }
 
-    fn operation(&mut self, op: u32) {}
+    // For testing purposes:
+    // op "1" adds data reg 1 & 2 together, and stores result in 3
+    // op "2" multiplies data reg 4 & 5 together, and stores result in 6
+    fn operation(&mut self, op: u32) {
+        match op {
+            1 => self.data_reg[3] = self.data_reg[1] + self.data_reg[2],
+            2 => self.data_reg[6] = self.data_reg[4] * self.data_reg[5],
+            _ => {}
+        }
+    }
 }
 
 impl MIPSI<LittleMemTest, EmptyCoproc0, TestCoproc, EmptyCoproc, EmptyCoproc> {
@@ -887,4 +896,40 @@ fn bgezal() {
     assert_eq!(cpu.read_gp(3), 0x123);
     cpu.step();
     assert_eq!(cpu.read_gp(4), 0x123);
+}
+
+// TODO: test jumps
+
+#[test]
+fn mtc1() {
+    let mut cpu = MIPSI::default();
+
+    cpu.write_gp(10, 0x100);
+    cpu.mtcz(Coproc::_1, 10, 1);
+    
+    assert_eq!(cpu.coproc_1().unwrap().data_reg[1], 0x100);
+}
+
+#[test]
+fn mfc1() {
+    let mut cpu = MIPSI::default();
+
+    cpu.coproc_1().unwrap().data_reg[1] = 0xFF;
+    cpu.mfcz(Coproc::_1, 10, 1);
+    
+    assert_eq!(cpu.read_gp(10), 0xFF);
+}
+
+#[test]
+fn cop1() {
+    let mut cpu = MIPSI::default();
+
+    cpu.coproc_1().unwrap().data_reg[1] = 0xFF;
+    cpu.coproc_1().unwrap().data_reg[2] = 0x2;
+
+    cpu.mem().write_word(0, (0x11 << 26) | (0x1 << 25) | 0x1);
+
+    cpu.step();
+    
+    assert_eq!(cpu.coproc_1().unwrap().data_reg[3], 0x101);
 }

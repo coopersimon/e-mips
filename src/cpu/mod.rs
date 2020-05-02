@@ -99,7 +99,7 @@ pub trait MIPSICore {
     fn mem<'a>(&'a mut self) -> &'a mut Self::Mem;
 
     /// Borrow coprocessor 0.
-    fn coproc_0<'a>(&'a mut self) -> Option<&'a mut Self::Coproc0>;
+    fn coproc_0<'a>(&'a mut self) -> &'a mut Self::Coproc0;
     /// Borrow coprocessor 1.
     fn coproc_1<'a>(&'a mut self) -> Option<&'a mut Self::Coproc1>;
     /// Borrow coprocessor 2.
