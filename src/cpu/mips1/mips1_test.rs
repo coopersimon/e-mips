@@ -38,12 +38,6 @@ struct TestCoproc {
     data_reg:       [u32; 32],
 }
 
-impl From<EmptyCoproc> for TestCoproc {
-    fn from(_: EmptyCoproc) -> Self {
-        Self::default()
-    }
-}
-
 impl Coprocessor for TestCoproc {
     fn move_from_reg(&mut self, reg: usize) -> u32 {
         self.data_reg[reg]

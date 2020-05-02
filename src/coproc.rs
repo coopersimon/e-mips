@@ -1,4 +1,4 @@
-pub trait Coprocessor: From<EmptyCoproc> {
+pub trait Coprocessor {
     fn move_from_reg(&mut self, reg: usize) -> u32;
     fn move_to_reg(&mut self, reg: usize, val: u32);
 

@@ -17,10 +17,10 @@ pub use instructions::*;
 /// Mips I processor.
 pub struct MIPSI<
     Mem: Mem32,
-    C0: Coprocessor,
-    C1: Coprocessor,
-    C2: Coprocessor,
-    C3: Coprocessor
+    C0: Coprocessor = EmptyCoproc,
+    C1: Coprocessor = EmptyCoproc,
+    C2: Coprocessor = EmptyCoproc,
+    C3: Coprocessor = EmptyCoproc
 > {
     gp_reg:     [u32; 32],
     hi:         u32,
@@ -63,76 +63,86 @@ impl<
         }
     }
 
-    pub fn with_memory(mem: Box<Mem>) -> MIPSIBuilder<Mem, C0, C1, C2, C3> {
-        MIPSIBuilder::new(mem)
+    pub fn with_memory(mem: Box<Mem>) -> MIPSIBuilder<Mem> {
+        <MIPSIBuilder<Mem>>::new(mem)
     }
 }
 
 //
 pub struct MIPSIBuilder<
     Mem: Mem32,
-    C0: Coprocessor,
-    C1: Coprocessor,
-    C2: Coprocessor,
-    C3: Coprocessor
+    C0: Coprocessor = EmptyCoproc,
+    C1: Coprocessor = EmptyCoproc,
+    C2: Coprocessor = EmptyCoproc,
+    C3: Coprocessor = EmptyCoproc
 > {
     mem:        Box<Mem>,
 
-    coproc0:    Option<C0>,
-    coproc1:    Option<C1>,
-    coproc2:    Option<C2>,
-    coproc3:    Option<C3>,
+    coproc0:    C0,
+    coproc1:    C1,
+    coproc2:    C2,
+    coproc3:    C3,
 }
 
 impl<
     Mem: Mem32,
-    C0In: Coprocessor,
-    C1In: Coprocessor,
-    C2In: Coprocessor,
-    C3In: Coprocessor
-> MIPSIBuilder<Mem, C0In, C1In, C2In, C3In> {
-    fn new(mem: Box<Mem>) -> Self {
-        Self {
+    C0: Coprocessor,
+    C1: Coprocessor,
+    C2: Coprocessor,
+    C3: Coprocessor
+> MIPSIBuilder<Mem, C0, C1, C2, C3> {
+    fn new(mem: Box<Mem>) -> MIPSIBuilder<Mem, EmptyCoproc, EmptyCoproc, EmptyCoproc, EmptyCoproc> {
+        MIPSIBuilder {
             mem:        mem,
-            coproc0:    None,
-            coproc1:    None,
-            coproc2:    None,
-            coproc3:    None,
+            coproc0:    EmptyCoproc{},
+            coproc1:    EmptyCoproc{},
+            coproc2:    EmptyCoproc{},
+            coproc3:    EmptyCoproc{},
         }
     }
 
-    pub fn add_coproc0(mut self, coproc0: C0In) -> Self {
-        self.coproc0 = Some(coproc0);
-        self
+    pub fn add_coproc0<NewC0: Coprocessor>(mut self, coproc0: NewC0) -> MIPSIBuilder<Mem, NewC0, C1, C2, C3> {
+        MIPSIBuilder {
+            mem:        self.mem,
+            coproc0:    coproc0,
+            coproc1:    self.coproc1,
+            coproc2:    self.coproc2,
+            coproc3:    self.coproc3,
+        }
     }
 
-    pub fn add_coproc1(mut self, coproc1: C1In) -> Self {
-        self.coproc1 = Some(coproc1);
-        self
+    pub fn add_coproc1<NewC1: Coprocessor>(mut self, coproc1: NewC1) -> MIPSIBuilder<Mem, C0, NewC1, C2, C3> {
+        MIPSIBuilder {
+            mem:        self.mem,
+            coproc0:    self.coproc0,
+            coproc1:    coproc1,
+            coproc2:    self.coproc2,
+            coproc3:    self.coproc3,
+        }
     }
 
-    pub fn add_coproc2(mut self, coproc2: C2In) -> Self {
-        self.coproc2 = Some(coproc2);
-        self
+    pub fn add_coproc2<NewC2: Coprocessor>(mut self, coproc2: NewC2) -> MIPSIBuilder<Mem, C0, C1, NewC2, C3> {
+        MIPSIBuilder {
+            mem:        self.mem,
+            coproc0:    self.coproc0,
+            coproc1:    self.coproc1,
+            coproc2:    coproc2,
+            coproc3:    self.coproc3,
+        }
     }
 
-    pub fn add_coproc3(mut self, coproc3: C3In) -> Self {
-        self.coproc3 = Some(coproc3);
-        self
+    pub fn add_coproc3<NewC3: Coprocessor>(mut self, coproc3: NewC3) -> MIPSIBuilder<Mem, C0, C1, C2, NewC3> {
+        MIPSIBuilder {
+            mem:        self.mem,
+            coproc0:    self.coproc0,
+            coproc1:    self.coproc1,
+            coproc2:    self.coproc2,
+            coproc3:    coproc3,
+        }
     }
 
-    pub fn build<
-        C0Out: Coprocessor + From<C0In> + From<EmptyCoproc>,
-        C1Out: Coprocessor + From<C1In> + From<EmptyCoproc>,
-        C2Out: Coprocessor + From<C2In> + From<EmptyCoproc>,
-        C3Out: Coprocessor + From<C3In> + From<EmptyCoproc>
-    >(self) -> MIPSI<Mem, C0Out, C1Out, C2Out, C3Out> {
-        let coproc0 = if let Some(c0) = self.coproc0 {c0.into()} else {EmptyCoproc{}.into()};
-        let coproc1 = if let Some(c1) = self.coproc1 {c1.into()} else {EmptyCoproc{}.into()};
-        let coproc2 = if let Some(c2) = self.coproc2 {c2.into()} else {EmptyCoproc{}.into()};
-        let coproc3 = if let Some(c3) = self.coproc3 {c3.into()} else {EmptyCoproc{}.into()};
-
-        MIPSI::new(self.mem, coproc0, coproc1, coproc2, coproc3)
+    pub fn build(self) -> MIPSI<Mem, C0, C1, C2, C3> {
+        MIPSI::new(self.mem, self.coproc0, self.coproc1, self.coproc2, self.coproc3)
     }
 }
 
