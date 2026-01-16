@@ -7,8 +7,6 @@ use super::*;
 use crate::common::*;
 use crate::coproc::*;
 use crate::mem::{
-    Memory,
-    Mem16,
     Mem32
 };
 
@@ -204,7 +202,7 @@ impl<
         self.pc_next = hi | segment_addr;
     }
 
-    fn trigger_exception(&mut self, exception: ExceptionCode) {
+    fn trigger_exception(&mut self, _exception: ExceptionCode) {
 
     }
 

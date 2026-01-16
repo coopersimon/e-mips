@@ -18,8 +18,9 @@ impl LittleMemTest {
     }
 }
 
-impl Memory for LittleMemTest {
+impl Mem32 for LittleMemTest {
     type Addr = u32;
+    const LITTLE_ENDIAN: bool = true;
 
     fn read_byte(&mut self, addr: Self::Addr) -> u8 {
         self.bytes[addr as usize]
@@ -29,8 +30,6 @@ impl Memory for LittleMemTest {
         self.bytes[addr as usize] = data;
     }
 }
-
-impl_mem_32_little!{ LittleMemTest }
 
 #[derive(Default)]
 struct TestCoproc {

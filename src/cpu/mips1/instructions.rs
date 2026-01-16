@@ -5,7 +5,7 @@ use super::*;
 /// The arguments must have been decoded prior to calling these.
 /// If a register number argument has a value greater than 31, the result is undefined.
 pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
-    where Mem: Mem32, <Mem as Memory>::Addr: From<u32> {
+    where Mem: Mem32, Mem::Addr: From<u32> {
     // Arithmetic
 
     /// Add signed
@@ -315,7 +315,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
 
         let word_addr = addr & 0xFFFF_FFFC;
         let byte_addr = addr & 3;
-        let byte_offset = if self.mem().little_endian() { 3 - byte_addr } else { byte_addr };
+        let byte_offset = if Mem::LITTLE_ENDIAN { 3 - byte_addr } else { byte_addr };
 
         let word = self.mem().read_word(word_addr.into());
         let old_word = match byte_offset {
@@ -339,7 +339,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
 
         let word_addr = addr & 0xFFFF_FFFC;
         let byte_addr = addr & 3;
-        let byte_offset = if self.mem().little_endian() { byte_addr } else { 3 - byte_addr };
+        let byte_offset = if Mem::LITTLE_ENDIAN { byte_addr } else { 3 - byte_addr };
 
         let word = self.mem().read_word(word_addr.into());
         let old_word = match byte_offset {
@@ -390,7 +390,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
 
         let word_addr = addr & 0xFFFF_FFFC;
         let byte_addr = addr & 3;
-        let byte_offset = if self.mem().little_endian() { 3 - byte_addr } else { byte_addr };
+        let byte_offset = if Mem::LITTLE_ENDIAN { 3 - byte_addr } else { byte_addr };
 
         let word = self.read_gp(tgt_reg);
         let old_word = match byte_offset {
@@ -414,7 +414,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
 
         let word_addr = addr & 0xFFFF_FFFC;
         let byte_addr = addr & 3;
-        let byte_offset = if self.mem().little_endian() { byte_addr } else { 3 - byte_addr };
+        let byte_offset = if Mem::LITTLE_ENDIAN { byte_addr } else { 3 - byte_addr };
 
         let word = self.read_gp(tgt_reg);
         let old_word = match byte_offset {
@@ -653,7 +653,7 @@ impl<
     C2: Coprocessor,
     C3: Coprocessor
 > MIPSCore for MIPSI<Mem, C0, C1, C2, C3>
-    where <Mem as Memory>::Addr: From<u32>, MIPSI<Mem, C0, C1, C2, C3>: MIPSIInstructions<Mem> {
+    where Mem::Addr: From<u32>, MIPSI<Mem, C0, C1, C2, C3>: MIPSIInstructions<Mem> {
 
     fn step(&mut self) {
         let instr = self.mem.read_word(self.pc.into());
