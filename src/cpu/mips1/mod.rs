@@ -205,10 +205,15 @@ impl<
     }
 
     fn trigger_exception(&mut self, exception: ExceptionCode) {
-        let ret_addr = self.current_instr_addr;
-        let branch_delay = (ret_addr + 4) != self.pc;
-        let bad_v_addr = 0; // TODO!
-        self.coproc0.trigger_exception(exception, ret_addr, bad_v_addr, branch_delay);
+        let branch_delay = self.current_instr_addr.wrapping_add(4) != self.pc;
+        let exception = Exception {
+            code: exception,
+            ret_addr: if branch_delay {self.current_instr_addr.wrapping_sub(4)} else {self.current_instr_addr},
+            bad_virtual_addr: 0, // TODO!
+            branch_delay,
+        };
+        self.pc = self.coproc0.trigger_exception(&exception);
+        self.pc_next = self.pc.wrapping_add(4);
     }
 
     fn mem<'a>(&'a mut self) -> &'a mut Self::Mem {

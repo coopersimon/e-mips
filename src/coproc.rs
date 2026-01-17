@@ -1,5 +1,6 @@
 use crate::cpu::ExceptionCode;
 
+/// Trait for implementations of Coprocessors 1-3.
 pub trait Coprocessor {
     fn move_from_reg(&mut self, reg: usize) -> u32;
     fn move_to_reg(&mut self, reg: usize, val: u32);
@@ -34,6 +35,18 @@ impl Coprocessor for EmptyCoproc {
     fn operation(&mut self, _: u32) {}
 }
 
+/// Exception data for coprocessor 0.
+pub struct Exception {
+    pub code:               ExceptionCode,
+    pub ret_addr:           u32,
+    pub bad_virtual_addr:   u32,
+    pub branch_delay:       bool,
+}
+
+/// Trait for implementations of Coprocessor 0.
+///
+/// This is a special coprocessor for handling of
+/// exceptions, virtual memory, and other system ops.
 pub trait Coprocessor0 {
     // Called by instructions
     fn move_from_reg(&mut self, reg: usize) -> u32;
@@ -41,8 +54,11 @@ pub trait Coprocessor0 {
 
     fn operation(&mut self, op: u32);
 
-    // Called by CPU
-    fn trigger_exception(&mut self, exception: ExceptionCode, ret_addr: u32, bad_v_addr: u32, branch_delay: bool);
+    /// This will trigger an exception with the defined data.
+    /// Should only be called from the CPU side.
+    /// 
+    /// Returns an exception vector to jump to.
+    fn trigger_exception(&mut self, exception: &Exception) -> u32;
 }
 
 pub struct EmptyCoproc0 {}
@@ -55,5 +71,7 @@ impl Coprocessor0 for EmptyCoproc0 {
 
     fn operation(&mut self, _: u32) {}
 
-    fn trigger_exception(&mut self, _: ExceptionCode, _: u32, _: u32, _: bool) {}
+    fn trigger_exception(&mut self, _: &Exception) -> u32 {
+        0
+    }
 }
