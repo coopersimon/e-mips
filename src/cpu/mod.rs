@@ -8,6 +8,7 @@ use crate::coproc::{
 };
 
 /// Exception codes.
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ExceptionCode {
     Interrupt           = 0,
     TLBMod              = 1,

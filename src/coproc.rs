@@ -1,3 +1,5 @@
+use crate::cpu::ExceptionCode;
+
 pub trait Coprocessor {
     fn move_from_reg(&mut self, reg: usize) -> u32;
     fn move_to_reg(&mut self, reg: usize, val: u32);
@@ -33,10 +35,14 @@ impl Coprocessor for EmptyCoproc {
 }
 
 pub trait Coprocessor0 {
+    // Called by instructions
     fn move_from_reg(&mut self, reg: usize) -> u32;
     fn move_to_reg(&mut self, reg: usize, val: u32);
 
     fn operation(&mut self, op: u32);
+
+    // Called by CPU
+    fn trigger_exception(&mut self, exception: ExceptionCode, ret_addr: u32, bad_v_addr: u32);
 }
 
 pub struct EmptyCoproc0 {}
@@ -48,4 +54,6 @@ impl Coprocessor0 for EmptyCoproc0 {
     fn move_to_reg(&mut self, _: usize, _: u32) {}
 
     fn operation(&mut self, _: u32) {}
+
+    fn trigger_exception(&mut self, _: ExceptionCode, _: u32, _: u32) {}
 }

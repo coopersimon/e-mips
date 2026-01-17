@@ -202,8 +202,8 @@ impl<
         self.pc_next = hi | segment_addr;
     }
 
-    fn trigger_exception(&mut self, _exception: ExceptionCode) {
-
+    fn trigger_exception(&mut self, exception: ExceptionCode) {
+        self.coproc0.trigger_exception(exception, self.pc, 0); // TODO: bad_v_addr
     }
 
     fn mem<'a>(&'a mut self) -> &'a mut Self::Mem {
