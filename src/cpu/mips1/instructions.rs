@@ -656,7 +656,8 @@ impl<
     where Mem::Addr: From<u32>, MIPSI<Mem, C0, C1, C2, C3>: MIPSIInstructions<Mem> {
 
     fn step(&mut self) {
-        let instr = self.mem.read_word(self.pc.into());
+        self.current_instr_addr = self.pc;
+        let instr = self.mem.read_word(self.current_instr_addr.into());
         self.pc = self.pc_next;
         self.pc_next = self.pc_next.wrapping_add(4);
 

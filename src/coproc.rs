@@ -42,7 +42,7 @@ pub trait Coprocessor0 {
     fn operation(&mut self, op: u32);
 
     // Called by CPU
-    fn trigger_exception(&mut self, exception: ExceptionCode, ret_addr: u32, bad_v_addr: u32);
+    fn trigger_exception(&mut self, exception: ExceptionCode, ret_addr: u32, bad_v_addr: u32, branch_delay: bool);
 }
 
 pub struct EmptyCoproc0 {}
@@ -55,5 +55,5 @@ impl Coprocessor0 for EmptyCoproc0 {
 
     fn operation(&mut self, _: u32) {}
 
-    fn trigger_exception(&mut self, _: ExceptionCode, _: u32, _: u32) {}
+    fn trigger_exception(&mut self, _: ExceptionCode, _: u32, _: u32, _: bool) {}
 }

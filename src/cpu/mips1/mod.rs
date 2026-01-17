@@ -24,6 +24,7 @@ pub struct MIPSI<
     hi:         u32,
     lo:         u32,
 
+    current_instr_addr:  u32,
     pc:         u32,
     pc_next:    u32,
 
@@ -49,6 +50,7 @@ impl<
             hi:         0,
             lo:         0,
 
+            current_instr_addr:  0,
             pc:         0,
             pc_next:    4,
 
@@ -203,7 +205,10 @@ impl<
     }
 
     fn trigger_exception(&mut self, exception: ExceptionCode) {
-        self.coproc0.trigger_exception(exception, self.pc, 0); // TODO: bad_v_addr
+        let ret_addr = self.current_instr_addr;
+        let branch_delay = (ret_addr + 4) != self.pc;
+        let bad_v_addr = 0; // TODO!
+        self.coproc0.trigger_exception(exception, ret_addr, bad_v_addr, branch_delay);
     }
 
     fn mem<'a>(&'a mut self) -> &'a mut Self::Mem {
