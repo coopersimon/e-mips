@@ -22,6 +22,10 @@ impl Mem32 for LittleMemTest {
     type Addr = u32;
     const LITTLE_ENDIAN: bool = true;
 
+    fn clock(&mut self, _cycles: usize) -> u8 {
+        0
+    }
+
     fn read_byte(&mut self, addr: Self::Addr) -> u8 {
         self.bytes[addr as usize]
     }

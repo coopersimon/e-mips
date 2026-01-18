@@ -59,6 +59,16 @@ pub trait Coprocessor0 {
     /// 
     /// Returns an exception vector to jump to.
     fn trigger_exception(&mut self, exception: &Exception) -> u32;
+
+    /// If an external interrupt occurs, this method sets one or more of the
+    /// external interrupt bits.
+    /// 
+    /// The mask matches the 8 interrupt pending bits. Normally, only the
+    /// top 6 are set externally, with the bottom 2 being software-controlled.
+    /// 
+    /// If this returns true, then an interrupt exception occurred, and
+    /// `trigger_exception` should be called.
+    fn external_interrupt(&mut self, mask: u8) -> bool;
 }
 
 pub struct EmptyCoproc0 {}
@@ -73,5 +83,9 @@ impl Coprocessor0 for EmptyCoproc0 {
 
     fn trigger_exception(&mut self, _: &Exception) -> u32 {
         0
+    }
+
+    fn external_interrupt(&mut self, _: u8) -> bool {
+        false
     }
 }

@@ -702,6 +702,7 @@ impl<
             instr & MASK
         };
 
+        let cycles = 1; // TODO: count cycles
         match op() {
             0 => match special_op() {
                 0x20 => self.add(source(), target(), dest()),
@@ -825,6 +826,11 @@ impl<
             0x3B => self.swcz(Coproc::_3, source(), target(), imm()),
 
             _ => self.trigger_exception(ExceptionCode::ReservedInstruction),
+        }
+
+        let int = self.mem.clock(cycles);
+        if self.coproc0.external_interrupt(int) {
+            self.trigger_exception(ExceptionCode::Interrupt);
         }
     }
 }
