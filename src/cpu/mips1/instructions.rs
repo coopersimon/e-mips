@@ -10,10 +10,11 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
 
     /// Add signed
     fn add(&mut self, src_reg: u8, tgt_reg: u8, dst_reg: u8) {
-        let source = self.read_gp(src_reg);
-        let target = self.read_gp(tgt_reg);
-        if let Some(result) = source.checked_add(target) {
-            self.write_gp(dst_reg, result);
+        let source = self.read_gp(src_reg) as i32;
+        let target = self.read_gp(tgt_reg) as i32;
+        let (result, overflow) = source.overflowing_add(target);
+        if !overflow {
+            self.write_gp(dst_reg, result as u32);
         } else {
             self.trigger_exception(ExceptionCode::ArithmeticOverflow);
         }
@@ -21,10 +22,11 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
 
     /// Add immediate signed
     fn addi(&mut self, src_reg: u8, tgt_reg: u8, imm: u16) {
-        let source = self.read_gp(src_reg);
-        let imm_32 = sign_extend_16(imm);
-        if let Some(result) = source.checked_add(imm_32) {
-            self.write_gp(tgt_reg, result);
+        let source = self.read_gp(src_reg) as i32;
+        let imm_32 = sign_extend_16(imm) as i32;
+        let (result, overflow) = source.overflowing_add(imm_32);
+        if !overflow {
+            self.write_gp(tgt_reg, result as u32);
         } else {
             self.trigger_exception(ExceptionCode::ArithmeticOverflow);
         }
@@ -48,10 +50,11 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
 
     /// Sub signed
     fn sub(&mut self, src_reg: u8, tgt_reg: u8, dst_reg: u8) {
-        let source = self.read_gp(src_reg);
-        let target = self.read_gp(tgt_reg);
-        if let Some(result) = source.checked_sub(target) {
-            self.write_gp(dst_reg, result);
+        let source = self.read_gp(src_reg) as i32;
+        let target = self.read_gp(tgt_reg) as i32;
+        let (result, overflow) = source.overflowing_sub(target);
+        if !overflow {
+            self.write_gp(dst_reg, result as u32);
         } else {
             self.trigger_exception(ExceptionCode::ArithmeticOverflow);
         }

@@ -36,6 +36,40 @@ impl Mem32 for LittleMemTest {
 }
 
 #[derive(Default)]
+struct TestCoproc0 {
+    data_reg:       [u32; 32],
+    last_exception: Option<ExceptionCode>,
+}
+
+impl Coprocessor0 for TestCoproc0 {
+    fn move_from_reg(&mut self, reg: u8) -> u32 {
+        self.data_reg[reg as usize]
+    }
+    fn move_to_reg(&mut self, reg: u8, val: u32) {
+        self.data_reg[reg as usize] = val;
+    }
+
+    fn operation(&mut self, op: u32) {
+        match op {
+            _ => {}
+        }
+    }
+
+    fn external_interrupt(&mut self, _mask: u8) -> bool {
+        false
+    }
+
+    fn reset(&mut self) -> u32 {
+        0
+    }
+
+    fn trigger_exception(&mut self, exception: &Exception) -> u32 {
+        self.last_exception = Some(exception.code);
+        0
+    }
+}
+
+#[derive(Default)]
 struct TestCoproc {
     control_reg:    [u32; 32],
     data_reg:       [u32; 32],
@@ -75,9 +109,10 @@ impl Coprocessor for TestCoproc {
     }
 }
 
-impl MIPSI<LittleMemTest, EmptyCoproc0, TestCoproc, EmptyCoproc, EmptyCoproc> {
+impl MIPSI<LittleMemTest, TestCoproc0, TestCoproc, EmptyCoproc, EmptyCoproc> {
     fn default() -> Self {
         Self::with_memory(Box::new(LittleMemTest::new(0x1000)))
+            .add_coproc0(TestCoproc0::default())
             .add_coproc1(TestCoproc::default())
             .build()
     }
@@ -121,11 +156,20 @@ fn add() {
 
     let mut cpu = MIPSI::default();
 
-    // Test overflow.
     cpu.write_gp(1, 0xFFFFFFFF);
     cpu.write_gp(2, 0x5);
     cpu.add(1, 2, 3);
+    assert_eq!(cpu.read_gp(3), 4);
+    assert!(cpu.coproc0.last_exception.is_none());
+
+    // Test overflow.
+    let mut cpu = MIPSI::default();
+
+    cpu.write_gp(1, 0x8000_0000);
+    cpu.write_gp(2, 0xFFFF_0000);
+    cpu.add(1, 2, 3);
     assert_eq!(cpu.read_gp(3), 0);
+    assert_eq!(cpu.coproc0.last_exception, Some(ExceptionCode::ArithmeticOverflow));
 }
 
 #[test]
@@ -138,10 +182,18 @@ fn addi() {
 
     let mut cpu = MIPSI::default();
 
-    // Test overflow.
     cpu.write_gp(1, 0x10000);
     cpu.addi(1, 2, 0x8000);
+    assert_eq!(cpu.read_gp(2), 0x8000);
+    assert!(cpu.coproc0.last_exception.is_none());
+
+    // Test overflow.
+    let mut cpu = MIPSI::default();
+
+    cpu.write_gp(1, 0x7FFF_FFFF);
+    cpu.addi(1, 2, 0x100);
     assert_eq!(cpu.read_gp(2), 0);
+    assert_eq!(cpu.coproc0.last_exception, Some(ExceptionCode::ArithmeticOverflow));
 }
 
 #[test]
@@ -155,11 +207,20 @@ fn addu() {
 
     let mut cpu = MIPSI::default();
 
-    // Test overflow.
     cpu.write_gp(1, 0xFFFFFFFF);
     cpu.write_gp(2, 0x5);
     cpu.addu(1, 2, 3);
     assert_eq!(cpu.read_gp(3), 4);
+    assert!(cpu.coproc0.last_exception.is_none());
+
+    // Test overflow.
+    let mut cpu = MIPSI::default();
+
+    cpu.write_gp(1, 0x8000_0000);
+    cpu.write_gp(2, 0xFFFF_0000);
+    cpu.addu(1, 2, 3);
+    assert_eq!(cpu.read_gp(3), 0x7FFF_0000);
+    assert_eq!(cpu.coproc0.last_exception, None);
 }
 
 #[test]
@@ -172,10 +233,18 @@ fn addiu() {
 
     let mut cpu = MIPSI::default();
 
-    // Test overflow.
     cpu.write_gp(1, 0x10000);
     cpu.addiu(1, 2, 0x8000);
     assert_eq!(cpu.read_gp(2), 0x8000);
+    assert!(cpu.coproc0.last_exception.is_none());
+
+    // Test overflow.
+    let mut cpu = MIPSI::default();
+
+    cpu.write_gp(1, 0x7FFF_FFFF);
+    cpu.addiu(1, 2, 0x100);
+    assert_eq!(cpu.read_gp(2), 0x8000_00FF);
+    assert_eq!(cpu.coproc0.last_exception, None);
 }
 
 #[test]
@@ -189,11 +258,20 @@ fn sub() {
 
     let mut cpu = MIPSI::default();
 
-    // Test overflow.
     cpu.write_gp(1, 0xFFFFFFFE);
     cpu.write_gp(2, 0xFFFFFFFF);
     cpu.sub(1, 2, 3);
+    assert_eq!(cpu.read_gp(3), 0xFFFF_FFFF);
+    assert!(cpu.coproc0.last_exception.is_none());
+
+    // Test overflow.
+    let mut cpu = MIPSI::default();
+
+    cpu.write_gp(1, 0x8000_0000);
+    cpu.write_gp(2, 0x1);
+    cpu.sub(1, 2, 3);
     assert_eq!(cpu.read_gp(3), 0);
+    assert_eq!(cpu.coproc0.last_exception, Some(ExceptionCode::ArithmeticOverflow));
 }
 
 #[test]
@@ -210,9 +288,18 @@ fn subu() {
     // Test overflow.
     cpu.write_gp(1, 0xFFFFFFFE);
     cpu.write_gp(2, 0xFFFFFFFF);
-
     cpu.subu(1, 2, 3);
-    assert_eq!(cpu.read_gp(3), -1i32 as u32);
+    assert_eq!(cpu.read_gp(3), 0xFFFF_FFFF);
+    assert!(cpu.coproc0.last_exception.is_none());
+
+    // Test overflow.
+    let mut cpu = MIPSI::default();
+
+    cpu.write_gp(1, 0x8000_0000);
+    cpu.write_gp(2, 0x1);
+    cpu.subu(1, 2, 3);
+    assert_eq!(cpu.read_gp(3), 0x7FFF_FFFF);
+    assert_eq!(cpu.coproc0.last_exception, None);
 }
 
 #[test]
