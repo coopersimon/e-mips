@@ -521,26 +521,26 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
 
     /// Jump
     fn j(&mut self, target: u32) {
-        self.jump(target << 2);
+        self.jump_segment(target << 2);
     }
 
     /// Jump and link
     fn jal(&mut self, target: u32) {
         self.link_register(31);
-        self.jump(target << 2);
+        self.jump_segment(target << 2);
     }
 
     /// Jump register
     fn jr(&mut self, src_reg: u8) {
         let dest = self.read_gp(src_reg);
-        self.jump(dest);
+        self.jump_global(dest);
     }
 
     /// Jump and link register
     fn jalr(&mut self, src_reg: u8, dst_reg: u8) {
         self.link_register(dst_reg);
         let dest = self.read_gp(src_reg);
-        self.jump(dest);
+        self.jump_global(dest);
     }
 
     // Special

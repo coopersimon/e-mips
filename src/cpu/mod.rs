@@ -95,7 +95,10 @@ pub trait MIPSICore {
     fn branch(&mut self, offset: u32);
 
     /// Modify the next PC (in the case of a jump).
-    fn jump(&mut self, segment_addr: u32);
+    fn jump_global(&mut self, addr: u32);
+
+    /// Modify the next PC (in the case of a jump).
+    fn jump_segment(&mut self, segment_addr: u32);
 
     /// Trigger an exception.
     fn trigger_exception(&mut self, exception: ExceptionCode);

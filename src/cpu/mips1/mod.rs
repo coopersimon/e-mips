@@ -199,7 +199,11 @@ impl<
         self.pc_next = self.pc.wrapping_add(offset);
     }
 
-    fn jump(&mut self, segment_addr: u32) {
+    fn jump_global(&mut self, addr: u32) {
+        self.pc_next = addr;
+    }
+
+    fn jump_segment(&mut self, segment_addr: u32) {
         let hi = self.pc_next & 0xF000_0000;
         self.pc_next = hi | segment_addr;
     }
