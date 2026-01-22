@@ -54,6 +54,11 @@ pub trait Coprocessor0 {
 
     fn operation(&mut self, op: u32);
 
+    /// Trigger reset.
+    /// 
+    /// Returns a vector to jump to.
+    fn reset(&mut self) -> u32;
+
     /// This will trigger an exception with the defined data.
     /// Should only be called from the CPU side.
     /// 
@@ -80,6 +85,10 @@ impl Coprocessor0 for EmptyCoproc0 {
     fn move_to_reg(&mut self, _: usize, _: u32) {}
 
     fn operation(&mut self, _: u32) {}
+
+    fn reset(&mut self) -> u32 {
+        0
+    }
 
     fn trigger_exception(&mut self, _: &Exception) -> u32 {
         0

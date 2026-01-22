@@ -41,6 +41,9 @@ pub enum Coproc {
 pub trait MIPSCore {
     /// Fetch, decode, and execute an instruction.
     fn step(&mut self);
+
+    /// Reset CPU.
+    fn reset(&mut self);
 }
 
 /// The core set of traits for the MIPS I instruction set.

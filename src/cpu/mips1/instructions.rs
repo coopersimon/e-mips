@@ -833,4 +833,10 @@ impl<
             self.trigger_exception(ExceptionCode::Interrupt);
         }
     }
+
+    fn reset(&mut self) {
+        let addr = self.coproc0.reset();
+        self.pc = addr;
+        self.pc_next = addr.wrapping_add(4);
+    }
 }
