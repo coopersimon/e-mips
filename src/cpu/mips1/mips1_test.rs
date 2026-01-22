@@ -42,24 +42,24 @@ struct TestCoproc {
 }
 
 impl Coprocessor for TestCoproc {
-    fn move_from_reg(&mut self, reg: usize) -> u32 {
-        self.data_reg[reg]
+    fn move_from_reg(&mut self, reg: u8) -> u32 {
+        self.data_reg[reg as usize]
     }
-    fn move_to_reg(&mut self, reg: usize, val: u32) {
-        self.data_reg[reg] = val;
-    }
-
-    fn move_from_control(&mut self, reg: usize) -> u32 {
-        self.control_reg[reg]
-    }
-    fn move_to_control(&mut self, reg: usize, val: u32) {
-        self.control_reg[reg] = val;
+    fn move_to_reg(&mut self, reg: u8, val: u32) {
+        self.data_reg[reg as usize] = val;
     }
 
-    fn load_from_mem(&mut self, reg: usize, val: u32) {
+    fn move_from_control(&mut self, reg: u8) -> u32 {
+        self.control_reg[reg as usize]
+    }
+    fn move_to_control(&mut self, reg: u8, val: u32) {
+        self.control_reg[reg as usize] = val;
+    }
+
+    fn load_from_mem(&mut self, reg: u8, val: u32) {
         self.move_to_reg(reg, val);
     }
-    fn store_to_mem(&mut self, reg: usize) -> u32 {
+    fn store_to_mem(&mut self, reg: u8) -> u32 {
         self.move_from_reg(reg)
     }
 

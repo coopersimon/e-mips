@@ -2,14 +2,14 @@ use crate::cpu::ExceptionCode;
 
 /// Trait for implementations of Coprocessors 1-3.
 pub trait Coprocessor {
-    fn move_from_reg(&mut self, reg: usize) -> u32;
-    fn move_to_reg(&mut self, reg: usize, val: u32);
+    fn move_from_reg(&mut self, reg: u8) -> u32;
+    fn move_to_reg(&mut self, reg: u8, val: u32);
 
-    fn move_from_control(&mut self, reg: usize) -> u32;
-    fn move_to_control(&mut self, reg: usize, val: u32);
+    fn move_from_control(&mut self, reg: u8) -> u32;
+    fn move_to_control(&mut self, reg: u8, val: u32);
 
-    fn load_from_mem(&mut self, reg: usize, val: u32);
-    fn store_to_mem(&mut self, reg: usize) -> u32;
+    fn load_from_mem(&mut self, reg: u8, val: u32);
+    fn store_to_mem(&mut self, reg: u8) -> u32;
 
     fn operation(&mut self, op: u32);
 }
@@ -17,18 +17,18 @@ pub trait Coprocessor {
 pub struct EmptyCoproc {}
 
 impl Coprocessor for EmptyCoproc {
-    fn move_from_reg(&mut self, _: usize) -> u32 {
+    fn move_from_reg(&mut self, _: u8) -> u32 {
         0
     }
-    fn move_to_reg(&mut self, _: usize, _: u32) {}
+    fn move_to_reg(&mut self, _: u8, _: u32) {}
 
-    fn move_from_control(&mut self, _: usize) -> u32 {
+    fn move_from_control(&mut self, _: u8) -> u32 {
         0
     }
-    fn move_to_control(&mut self, _: usize, _: u32) {}
+    fn move_to_control(&mut self, _: u8, _: u32) {}
 
-    fn load_from_mem(&mut self, _: usize, _: u32) {}
-    fn store_to_mem(&mut self, _: usize) -> u32 {
+    fn load_from_mem(&mut self, _: u8, _: u32) {}
+    fn store_to_mem(&mut self, _: u8) -> u32 {
         0
     }
 
@@ -49,8 +49,8 @@ pub struct Exception {
 /// exceptions, virtual memory, and other system ops.
 pub trait Coprocessor0 {
     // Called by instructions
-    fn move_from_reg(&mut self, reg: usize) -> u32;
-    fn move_to_reg(&mut self, reg: usize, val: u32);
+    fn move_from_reg(&mut self, reg: u8) -> u32;
+    fn move_to_reg(&mut self, reg: u8, val: u32);
 
     fn operation(&mut self, op: u32);
 
@@ -79,10 +79,10 @@ pub trait Coprocessor0 {
 pub struct EmptyCoproc0 {}
 
 impl Coprocessor0 for EmptyCoproc0 {
-    fn move_from_reg(&mut self, _: usize) -> u32 {
+    fn move_from_reg(&mut self, _: u8) -> u32 {
         0
     }
-    fn move_to_reg(&mut self, _: usize, _: u32) {}
+    fn move_to_reg(&mut self, _: u8, _: u32) {}
 
     fn operation(&mut self, _: u32) {}
 

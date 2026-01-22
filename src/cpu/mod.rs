@@ -28,11 +28,12 @@ pub enum ExceptionCode {
 /// Coprocessor number.
 /// 
 /// Used for internal coprocessor indexing.
+#[derive(Clone, Copy)]
 pub enum Coproc {
-    _0,
-    _1,
-    _2,
-    _3
+    _0 = 0,
+    _1 = 1,
+    _2 = 2,
+    _3 = 3
 }
 
 /// The core set of traits for a MIPS processor.
@@ -67,13 +68,13 @@ pub trait MIPSICore {
     /// 
     /// If a read is attempted on a register that is not value 0-31,
     /// the results are undefined.
-    fn read_gp(&self, reg: usize) -> u32;
+    fn read_gp(&self, reg: u8) -> u32;
 
     /// Write a general-purpose register.
     /// 
     /// If a write is attempted on a register that is not value 0-31,
     /// the results are undefined.
-    fn write_gp(&mut self, reg: usize, val: u32);
+    fn write_gp(&mut self, reg: u8, val: u32);
 
     /// Read the HI register.
     fn read_hi(&self) -> u32;
@@ -88,7 +89,7 @@ pub trait MIPSICore {
     fn write_lo(&mut self, val: u32);
 
     /// Link the specified register with the return address.
-    fn link_register(&mut self, reg: usize);
+    fn link_register(&mut self, reg: u8);
 
     /// Modify the next PC (in the case of a branch).
     fn branch(&mut self, offset: u32);

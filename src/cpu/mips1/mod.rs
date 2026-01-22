@@ -168,12 +168,12 @@ impl<
     type Coproc2 = C2;
     type Coproc3 = C3;
 
-    fn read_gp(&self, reg: usize) -> u32 {
-        self.gp_reg[reg]
+    fn read_gp(&self, reg: u8) -> u32 {
+        self.gp_reg[reg as usize]
     }
-    fn write_gp(&mut self, reg: usize, val: u32) {
+    fn write_gp(&mut self, reg: u8, val: u32) {
         if reg != 0 {
-            self.gp_reg[reg] = val;
+            self.gp_reg[reg as usize] = val;
         }
     }
 
@@ -191,7 +191,7 @@ impl<
         self.lo = val;
     }
 
-    fn link_register(&mut self, reg: usize) {
+    fn link_register(&mut self, reg: u8) {
         self.write_gp(reg, self.pc_next);
     }
 
