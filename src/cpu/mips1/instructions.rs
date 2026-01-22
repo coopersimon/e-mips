@@ -267,7 +267,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
-        let byte = self.mem().read_byte(addr.into());
+        let byte = self.mut_mem().read_byte(addr.into());
         self.write_gp(tgt_reg, sign_extend_8(byte));
     }
 
@@ -276,7 +276,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
-        let byte = self.mem().read_byte(addr.into());
+        let byte = self.mut_mem().read_byte(addr.into());
         self.write_gp(tgt_reg, byte as u32);
     }
 
@@ -285,7 +285,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
-        let halfword = self.mem().read_halfword(addr.into());
+        let halfword = self.mut_mem().read_halfword(addr.into());
         self.write_gp(tgt_reg, sign_extend_16(halfword));
     }
 
@@ -294,7 +294,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
-        let halfword = self.mem().read_halfword(addr.into());
+        let halfword = self.mut_mem().read_halfword(addr.into());
         self.write_gp(tgt_reg, halfword as u32);
     }
 
@@ -303,7 +303,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
-        let word = self.mem().read_word(addr.into());
+        let word = self.mut_mem().read_word(addr.into());
         self.write_gp(tgt_reg, word);
     }
 
@@ -317,7 +317,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let byte_addr = addr & 3;
         let byte_offset = if Mem::LITTLE_ENDIAN { 3 - byte_addr } else { byte_addr };
 
-        let word = self.mem().read_word(word_addr.into());
+        let word = self.mut_mem().read_word(word_addr.into());
         let old_word = match byte_offset {
             0 => 0,
             1 => 0xFFFF_FFFF >> 24,
@@ -341,7 +341,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let byte_addr = addr & 3;
         let byte_offset = if Mem::LITTLE_ENDIAN { byte_addr } else { 3 - byte_addr };
 
-        let word = self.mem().read_word(word_addr.into());
+        let word = self.mut_mem().read_word(word_addr.into());
         let old_word = match byte_offset {
             0 => 0,
             1 => 0xFFFF_FFFF << 24,
@@ -361,7 +361,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
         let data = self.read_gp(tgt_reg) as u8;
-        self.mem().write_byte(addr.into(), data);
+        self.mut_mem().write_byte(addr.into(), data);
     }
 
     /// Store halfword
@@ -370,7 +370,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
         let data = self.read_gp(tgt_reg) as u16;
-        self.mem().write_halfword(addr.into(), data);
+        self.mut_mem().write_halfword(addr.into(), data);
     }
 
     /// Store word
@@ -379,7 +379,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
         let data = self.read_gp(tgt_reg);
-        self.mem().write_word(addr.into(), data);
+        self.mut_mem().write_word(addr.into(), data);
     }
 
     /// Store word left
@@ -399,11 +399,11 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
             2 => 0xFFFF_FFFF << 16,
             3 => 0xFFFF_FFFF << 8,
             _ => unreachable!()
-        } & self.mem().read_word(word_addr.into());
+        } & self.mut_mem().read_word(word_addr.into());
 
         let shift = byte_offset * 8;
 
-        self.mem().write_word(word_addr.into(), old_word | (word >> shift));
+        self.mut_mem().write_word(word_addr.into(), old_word | (word >> shift));
     }
 
     /// Store word right
@@ -423,11 +423,11 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
             2 => 0xFFFF_FFFF >> 16,
             3 => 0xFFFF_FFFF >> 8,
             _ => unreachable!()
-        } & self.mem().read_word(word_addr.into());
+        } & self.mut_mem().read_word(word_addr.into());
 
         let shift = byte_offset * 8;
 
-        self.mem().write_word(word_addr.into(), old_word | (word << shift));
+        self.mut_mem().write_word(word_addr.into(), old_word | (word << shift));
     }
 
     /// Load upper immediate
@@ -609,7 +609,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
-        let data = self.mem().read_word(addr.into());
+        let data = self.mut_mem().read_word(addr.into());
         match coproc {
             Coproc::_0 => unreachable!(),
             Coproc::_1 => if let Some(cop) = self.coproc_1() {cop.move_to_reg(cop_reg, data)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
@@ -629,7 +629,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
             let base = self.read_gp(base_reg);
             let offset32 = sign_extend_16(offset);
             let addr = base.wrapping_add(offset32);
-            self.mem().write_word(addr.into(), data);
+            self.mut_mem().write_word(addr.into(), data);
         } else {
             self.trigger_exception(ExceptionCode::CoProcUnusable);
         }

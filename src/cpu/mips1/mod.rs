@@ -216,8 +216,12 @@ impl<
         self.pc_next = self.pc.wrapping_add(4);
     }
 
-    fn mem<'a>(&'a mut self) -> &'a mut Self::Mem {
+    fn mut_mem<'a>(&'a mut self) -> &'a mut Self::Mem {
         &mut self.mem
+    }
+
+    fn read_pc(&self) -> u32 {
+        self.pc
     }
 
     fn coproc_0<'a>(&'a mut self) -> &'a mut Self::Coproc0 {

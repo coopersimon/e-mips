@@ -96,8 +96,11 @@ pub trait MIPSICore {
     /// Trigger an exception.
     fn trigger_exception(&mut self, exception: ExceptionCode);
 
-    /// Borrow the memory bus.
-    fn mem<'a>(&'a mut self) -> &'a mut Self::Mem;
+    /// Mutably borrow the memory bus.
+    fn mut_mem<'a>(&'a mut self) -> &'a mut Self::Mem;
+
+    /// Get current program counter
+    fn read_pc(&self) -> u32;
 
     /// Borrow coprocessor 0.
     fn coproc_0<'a>(&'a mut self) -> &'a mut Self::Coproc0;

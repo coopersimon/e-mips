@@ -562,7 +562,7 @@ fn sltiu() {
 fn lb() {
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, 0x8765_4321);
+    cpu.mut_mem().write_word(0, 0x8765_4321);
 
     cpu.write_gp(1, 0);
     cpu.lb(1, 2, 0);
@@ -570,7 +570,7 @@ fn lb() {
 
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(8, 0xFEDC_BA98);
+    cpu.mut_mem().write_word(8, 0xFEDC_BA98);
 
     cpu.write_gp(1, 8);
     cpu.lb(1, 2, 3);
@@ -581,7 +581,7 @@ fn lb() {
 fn lbu() {
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, 0x8765_4321);
+    cpu.mut_mem().write_word(0, 0x8765_4321);
 
     cpu.write_gp(1, 2);
     cpu.lbu(1, 2, 0);
@@ -589,7 +589,7 @@ fn lbu() {
 
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(8, 0xFEDC_BA98);
+    cpu.mut_mem().write_word(8, 0xFEDC_BA98);
 
     cpu.write_gp(1, 8);
     cpu.lbu(1, 2, 3);
@@ -600,7 +600,7 @@ fn lbu() {
 fn lh() {
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, 0x8765_4321);
+    cpu.mut_mem().write_word(0, 0x8765_4321);
 
     cpu.write_gp(1, 0);
     cpu.lh(1, 2, 0);
@@ -608,7 +608,7 @@ fn lh() {
 
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(8, 0xFEDC_BA98);
+    cpu.mut_mem().write_word(8, 0xFEDC_BA98);
 
     cpu.write_gp(1, 8);
     cpu.lh(1, 2, 2);
@@ -619,7 +619,7 @@ fn lh() {
 fn lhu() {
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, 0x8765_4321);
+    cpu.mut_mem().write_word(0, 0x8765_4321);
 
     cpu.write_gp(1, 2);
     cpu.lhu(1, 2, 0);
@@ -627,7 +627,7 @@ fn lhu() {
 
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(8, 0xFEDC_BA98);
+    cpu.mut_mem().write_word(8, 0xFEDC_BA98);
 
     cpu.write_gp(1, 8);
     cpu.lhu(1, 2, 2);
@@ -638,7 +638,7 @@ fn lhu() {
 fn lw() {
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, 0x8765_4321);
+    cpu.mut_mem().write_word(0, 0x8765_4321);
 
     cpu.write_gp(1, 0);
     cpu.lw(1, 2, 0);
@@ -646,7 +646,7 @@ fn lw() {
 
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(8, 0xFEDC_BA98);
+    cpu.mut_mem().write_word(8, 0xFEDC_BA98);
 
     cpu.write_gp(1, 6);
     cpu.lw(1, 2, 2);
@@ -657,8 +657,8 @@ fn lw() {
 fn lwl() {
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, 0x8765_4321);
-    assert_eq!(cpu.mem().read_byte(0), 0x21);
+    cpu.mut_mem().write_word(0, 0x8765_4321);
+    assert_eq!(cpu.mut_mem().read_byte(0), 0x21);
 
     cpu.write_gp(1, 1);
     cpu.lwl(1, 2, 0);
@@ -666,8 +666,8 @@ fn lwl() {
 
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, 0xFEDC_BA98);
-    assert_eq!(cpu.mem().read_byte(3), 0xFE);
+    cpu.mut_mem().write_word(0, 0xFEDC_BA98);
+    assert_eq!(cpu.mut_mem().read_byte(3), 0xFE);
 
     cpu.write_gp(1, 1);
     cpu.lwl(1, 2, 1);
@@ -678,8 +678,8 @@ fn lwl() {
 fn lwr() {
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, 0x8765_4321);
-    assert_eq!(cpu.mem().read_byte(0), 0x21);
+    cpu.mut_mem().write_word(0, 0x8765_4321);
+    assert_eq!(cpu.mut_mem().read_byte(0), 0x21);
 
     cpu.write_gp(1, 1);
     cpu.lwr(1, 2, 0);
@@ -687,8 +687,8 @@ fn lwr() {
 
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, 0xFEDC_BA98);
-    assert_eq!(cpu.mem().read_byte(3), 0xFE);
+    cpu.mut_mem().write_word(0, 0xFEDC_BA98);
+    assert_eq!(cpu.mut_mem().read_byte(3), 0xFE);
 
     cpu.write_gp(1, 1);
     cpu.lwr(1, 2, 1);
@@ -699,105 +699,105 @@ fn lwr() {
 fn sb() {
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, 0x8765_4321);
+    cpu.mut_mem().write_word(0, 0x8765_4321);
     cpu.write_gp(2, 0xABCD);
 
     cpu.write_gp(1, 0);
     cpu.sb(1, 2, 0);
-    assert_eq!(cpu.mem().read_word(0), 0x8765_43CD);
+    assert_eq!(cpu.mut_mem().read_word(0), 0x8765_43CD);
 
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(8, 0xFEDC_BA98);
+    cpu.mut_mem().write_word(8, 0xFEDC_BA98);
     cpu.write_gp(2, 0x1234_5678);
 
     cpu.write_gp(1, 8);
     cpu.sb(1, 2, 3);
-    assert_eq!(cpu.mem().read_word(8), 0x78DC_BA98);
+    assert_eq!(cpu.mut_mem().read_word(8), 0x78DC_BA98);
 }
 
 #[test]
 fn sh() {
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, 0x8765_4321);
+    cpu.mut_mem().write_word(0, 0x8765_4321);
     cpu.write_gp(2, 0xABCD);
 
     cpu.write_gp(1, 0);
     cpu.sh(1, 2, 0);
-    assert_eq!(cpu.mem().read_word(0), 0x8765_ABCD);
+    assert_eq!(cpu.mut_mem().read_word(0), 0x8765_ABCD);
 
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(8, 0xFEDC_BA98);
+    cpu.mut_mem().write_word(8, 0xFEDC_BA98);
     cpu.write_gp(2, 0x1234_5678);
 
     cpu.write_gp(1, 8);
     cpu.sh(1, 2, 2);
-    assert_eq!(cpu.mem().read_word(8), 0x5678_BA98);
+    assert_eq!(cpu.mut_mem().read_word(8), 0x5678_BA98);
 }
 
 #[test]
 fn sw() {
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, 0x8765_4321);
+    cpu.mut_mem().write_word(0, 0x8765_4321);
     cpu.write_gp(2, 0xABCD);
 
     cpu.write_gp(1, 0);
     cpu.sw(1, 2, 0);
-    assert_eq!(cpu.mem().read_word(0), 0xABCD);
+    assert_eq!(cpu.mut_mem().read_word(0), 0xABCD);
 
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(8, 0xFEDC_BA98);
+    cpu.mut_mem().write_word(8, 0xFEDC_BA98);
     cpu.write_gp(2, 0x1234_5678);
 
     cpu.write_gp(1, 6);
     cpu.sw(1, 2, 2);
-    assert_eq!(cpu.mem().read_word(8), 0x1234_5678);
+    assert_eq!(cpu.mut_mem().read_word(8), 0x1234_5678);
 }
 
 #[test]
 fn swl() {
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, 0x8765_4321);
+    cpu.mut_mem().write_word(0, 0x8765_4321);
     cpu.write_gp(2, 0xABCD);
 
     cpu.write_gp(1, 1);
     cpu.swl(1, 2, 0);
-    assert_eq!(cpu.mem().read_word(0), 0x8765_0000);
+    assert_eq!(cpu.mut_mem().read_word(0), 0x8765_0000);
 
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(8, 0xFEDC_BA98);
+    cpu.mut_mem().write_word(8, 0xFEDC_BA98);
     cpu.write_gp(2, 0x1234_5678);
 
     cpu.write_gp(1, 8);
     cpu.swl(1, 2, 2);
-    assert_eq!(cpu.mem().read_word(8), 0xFE12_3456);
+    assert_eq!(cpu.mut_mem().read_word(8), 0xFE12_3456);
 }
 
 #[test]
 fn swr() {
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, 0x8765_4321);
+    cpu.mut_mem().write_word(0, 0x8765_4321);
     cpu.write_gp(2, 0xABCD);
 
     cpu.write_gp(1, 1);
     cpu.swr(1, 2, 0);
-    assert_eq!(cpu.mem().read_word(0), 0x00AB_CD21);
+    assert_eq!(cpu.mut_mem().read_word(0), 0x00AB_CD21);
 
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(8, 0xFEDC_BA98);
+    cpu.mut_mem().write_word(8, 0xFEDC_BA98);
     cpu.write_gp(2, 0x1234_5678);
 
     cpu.write_gp(1, 8);
     cpu.swr(1, 2, 2);
-    assert_eq!(cpu.mem().read_word(8), 0x5678_BA98);
+    assert_eq!(cpu.mut_mem().read_word(8), 0x5678_BA98);
 }
 
 // These tests test the operation of branches, but also rely on the correct behaviour of:
@@ -808,10 +808,10 @@ fn swr() {
 fn beq() {
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, make_i_instr(0x04, 1, 2, 0x40));
-    cpu.mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
-    cpu.mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
-    cpu.mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
+    cpu.mut_mem().write_word(0, make_i_instr(0x04, 1, 2, 0x40));
+    cpu.mut_mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
+    cpu.mut_mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
+    cpu.mut_mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
     cpu.write_gp(1, 0x1234);
     cpu.write_gp(2, 0x1234);
 
@@ -823,10 +823,10 @@ fn beq() {
 
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, make_i_instr(0x04, 1, 2, 0x40));
-    cpu.mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
-    cpu.mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
-    cpu.mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
+    cpu.mut_mem().write_word(0, make_i_instr(0x04, 1, 2, 0x40));
+    cpu.mut_mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
+    cpu.mut_mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
+    cpu.mut_mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
     cpu.write_gp(1, 0x1234);
     cpu.write_gp(2, 0);
 
@@ -841,10 +841,10 @@ fn beq() {
 fn bgtz() {
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, make_i_instr(0x07, 1, 0, 0x40));
-    cpu.mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
-    cpu.mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
-    cpu.mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
+    cpu.mut_mem().write_word(0, make_i_instr(0x07, 1, 0, 0x40));
+    cpu.mut_mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
+    cpu.mut_mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
+    cpu.mut_mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
     cpu.write_gp(1, 0x1234_5678);
 
     cpu.step();
@@ -855,10 +855,10 @@ fn bgtz() {
 
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, make_i_instr(0x07, 1, 2, 0x40));
-    cpu.mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
-    cpu.mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
-    cpu.mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
+    cpu.mut_mem().write_word(0, make_i_instr(0x07, 1, 2, 0x40));
+    cpu.mut_mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
+    cpu.mut_mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
+    cpu.mut_mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
     cpu.write_gp(1, 0);
 
     cpu.step();
@@ -872,10 +872,10 @@ fn bgtz() {
 fn bgezal() {
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, make_i_instr(0x01, 1, 0x11, 0x40));
-    cpu.mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
-    cpu.mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
-    cpu.mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
+    cpu.mut_mem().write_word(0, make_i_instr(0x01, 1, 0x11, 0x40));
+    cpu.mut_mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
+    cpu.mut_mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
+    cpu.mut_mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
     cpu.write_gp(1, 0x1234_5678);
 
     cpu.step();
@@ -887,10 +887,10 @@ fn bgezal() {
 
     let mut cpu = MIPSI::default();
 
-    cpu.mem().write_word(0, make_i_instr(0x01, 1, 0x11, 0x40));
-    cpu.mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
-    cpu.mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
-    cpu.mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
+    cpu.mut_mem().write_word(0, make_i_instr(0x01, 1, 0x11, 0x40));
+    cpu.mut_mem().write_word(4, make_i_instr(0x08, 3, 3, 0x123));
+    cpu.mut_mem().write_word(8, make_i_instr(0x08, 4, 4, 0x123));
+    cpu.mut_mem().write_word(0x104, make_i_instr(0x8, 4, 4, 0x456));
     cpu.write_gp(1, 0xFFFF_FFFF);
 
     cpu.step();
@@ -930,7 +930,7 @@ fn cop1() {
     cpu.coproc_1().unwrap().data_reg[1] = 0xFF;
     cpu.coproc_1().unwrap().data_reg[2] = 0x2;
 
-    cpu.mem().write_word(0, (0x11 << 26) | (0x1 << 25) | 0x1);
+    cpu.mut_mem().write_word(0, (0x11 << 26) | (0x1 << 25) | 0x1);
 
     cpu.step();
     
