@@ -20,6 +20,13 @@ impl<Width: Unsigned> Addr<Width> {
     }
 }
 
+/// Data returned from memory, with cycle count.
+#[derive(Clone, Copy)]
+pub struct Data<T> {
+    pub data: T,
+    pub cycles: usize
+}
+
 /// Memory with a 32-bit data bus.
 pub trait Mem32 {
 
@@ -39,24 +46,28 @@ pub trait Mem32 {
     fn clock(&mut self, cycles: usize) -> u8;
 
     /// Read a single byte.
-    fn read_byte(&mut self, addr: Self::Addr) -> u8;
+    fn read_byte(&mut self, addr: Self::Addr) -> Data<u8>;
 
     /// Write a single byte.
-    fn write_byte(&mut self, addr: Self::Addr, data: u8);
+    fn write_byte(&mut self, addr: Self::Addr, data: u8) -> usize;
 
     /// Read a 16-bit value.
     /// 
     /// Reads from this can be expected to be aligned (the bottom addr bit should be 0).
     /// Unaligned reads are undefined, and might panic.
-    fn read_halfword(&mut self, addr: Self::Addr) -> u16 {
+    fn read_halfword(&mut self, addr: Self::Addr) -> Data<u16> {
         use num_traits::identities::One;
 
         let lo = self.read_byte(addr);
         let hi = self.read_byte(addr + Self::Addr::one());
-        if Self::LITTLE_ENDIAN {
-            u16::from_le_bytes([lo, hi])
+        let data = if Self::LITTLE_ENDIAN {
+            u16::from_le_bytes([lo.data, hi.data])
         } else {
-            u16::from_be_bytes([lo, hi])
+            u16::from_be_bytes([lo.data, hi.data])
+        };
+        Data {
+            data,
+            cycles: lo.cycles + hi.cycles
         }
     }
 
@@ -64,7 +75,7 @@ pub trait Mem32 {
     /// 
     /// Writes to this can be expected to be aligned (the bottom addr bit should be 0).
     /// Unaligned writes are undefined, and might panic.
-    fn write_halfword(&mut self, addr: Self::Addr, data: u16) {
+    fn write_halfword(&mut self, addr: Self::Addr, data: u16) -> usize {
         use num_traits::identities::One;
 
         let [lo, hi] = if Self::LITTLE_ENDIAN {
@@ -72,15 +83,15 @@ pub trait Mem32 {
         } else {
             data.to_be_bytes()
         };
-        self.write_byte(addr, lo);
-        self.write_byte(addr + Self::Addr::one(), hi);
+        self.write_byte(addr, lo) +
+        self.write_byte(addr + Self::Addr::one(), hi)
     }
 
     /// Read a 32-bit value.
     /// 
     /// Reads from this can be expected to be aligned (the bottom 2 addr bits should be 0).
     /// Unaligned reads are undefined, and might panic.
-    fn read_word(&mut self, addr: Self::Addr) -> u32 {
+    fn read_word(&mut self, addr: Self::Addr) -> Data<u32> {
         use num_traits::identities::One;
 
         let addr0 = addr;
@@ -91,10 +102,14 @@ pub trait Mem32 {
         let b1 = self.read_byte(addr1);
         let b2 = self.read_byte(addr2);
         let b3 = self.read_byte(addr3);
-        if Self::LITTLE_ENDIAN {
-            u32::from_le_bytes([b0, b1, b2, b3])
+        let data = if Self::LITTLE_ENDIAN {
+            u32::from_le_bytes([b0.data, b1.data, b2.data, b3.data])
         } else {
-            u32::from_be_bytes([b0, b1, b2, b3])
+            u32::from_be_bytes([b0.data, b1.data, b2.data, b3.data])
+        };
+        Data {
+            data,
+            cycles: b0.cycles + b1.cycles + b2.cycles + b3.cycles
         }
     }
 
@@ -102,7 +117,7 @@ pub trait Mem32 {
     /// 
     /// Writes to this can be expected to be aligned (the bottom 2 addr bits should be 0).
     /// Unaligned writes are undefined, and might panic.
-    fn write_word(&mut self, addr: Self::Addr, data: u32) {
+    fn write_word(&mut self, addr: Self::Addr, data: u32) -> usize {
         use num_traits::identities::One;
 
         let bytes = if Self::LITTLE_ENDIAN {
@@ -114,10 +129,10 @@ pub trait Mem32 {
         let addr1 = addr0 + Self::Addr::one();
         let addr2 = addr1 + Self::Addr::one();
         let addr3 = addr2 + Self::Addr::one();
-        self.write_byte(addr0, bytes[0]);
-        self.write_byte(addr1, bytes[1]);
-        self.write_byte(addr2, bytes[2]);
-        self.write_byte(addr3, bytes[3]);
+        self.write_byte(addr0, bytes[0]) +
+        self.write_byte(addr1, bytes[1]) +
+        self.write_byte(addr2, bytes[2]) +
+        self.write_byte(addr3, bytes[3])
     }
 }
 
@@ -128,7 +143,7 @@ pub trait Mem64: Mem32 {
     /// 
     /// Reads from this can be expected to be aligned (the bottom 3 addr bits should be 0).
     /// Unaligned reads are undefined, and might panic.
-    fn read_doubleword(&mut self, addr: Self::Addr) -> u64 {
+    fn read_doubleword(&mut self, addr: Self::Addr) -> Data<u64> {
         use num_traits::identities::One;
 
         let addr0 = addr;
@@ -147,10 +162,15 @@ pub trait Mem64: Mem32 {
         let b5 = self.read_byte(addr5);
         let b6 = self.read_byte(addr6);
         let b7 = self.read_byte(addr7);
-        if Self::LITTLE_ENDIAN {
-            u64::from_le_bytes([b0, b1, b2, b3, b4, b5, b6, b7])
+        let data = if Self::LITTLE_ENDIAN {
+            u64::from_le_bytes([b0.data, b1.data, b2.data, b3.data, b4.data, b5.data, b6.data, b7.data])
         } else {
-            u64::from_be_bytes([b0, b1, b2, b3, b4, b5, b6, b7])
+            u64::from_be_bytes([b0.data, b1.data, b2.data, b3.data, b4.data, b5.data, b6.data, b7.data])
+        };
+        Data {
+            data,
+            cycles: b0.cycles + b1.cycles + b2.cycles + b3.cycles +
+                b4.cycles + b5.cycles + b6.cycles + b7.cycles
         }
     }
 
@@ -158,7 +178,7 @@ pub trait Mem64: Mem32 {
     /// 
     /// Writes to this can be expected to be aligned (the bottom 3 addr bits should be 0).
     /// Unaligned writes are undefined, and might panic.
-    fn write_doubleword(&mut self, addr: Self::Addr, data: u64) {
+    fn write_doubleword(&mut self, addr: Self::Addr, data: u64) -> usize {
         use num_traits::identities::One;
 
         let bytes = if Self::LITTLE_ENDIAN {
@@ -174,14 +194,14 @@ pub trait Mem64: Mem32 {
         let addr5 = addr4 + Self::Addr::one();
         let addr6 = addr5 + Self::Addr::one();
         let addr7 = addr6 + Self::Addr::one();
-        self.write_byte(addr0, bytes[0]);
-        self.write_byte(addr1, bytes[1]);
-        self.write_byte(addr2, bytes[2]);
-        self.write_byte(addr3, bytes[3]);
-        self.write_byte(addr4, bytes[4]);
-        self.write_byte(addr5, bytes[5]);
-        self.write_byte(addr6, bytes[6]);
-        self.write_byte(addr7, bytes[7]);
+        self.write_byte(addr0, bytes[0]) +
+        self.write_byte(addr1, bytes[1]) +
+        self.write_byte(addr2, bytes[2]) +
+        self.write_byte(addr3, bytes[3]) +
+        self.write_byte(addr4, bytes[4]) +
+        self.write_byte(addr5, bytes[5]) +
+        self.write_byte(addr6, bytes[6]) +
+        self.write_byte(addr7, bytes[7])
     }
 }
 
@@ -209,12 +229,16 @@ mod tests {
             0
         }
 
-        fn read_byte(&mut self, addr: Self::Addr) -> u8 {
-            self.bytes[addr as usize]
+        fn read_byte(&mut self, addr: Self::Addr) -> Data<u8> {
+            Data {
+                data: self.bytes[addr as usize],
+                cycles: 1,
+            }
         }
 
-        fn write_byte(&mut self, addr: Self::Addr, data: u8) {
+        fn write_byte(&mut self, addr: Self::Addr, data: u8) -> usize {
             self.bytes[addr as usize] = data;
+            1
         }
     }
 
@@ -227,6 +251,7 @@ mod tests {
         mem.write_byte(2, 0x56);
         mem.write_byte(3, 0x78);
 
-        assert_eq!(mem.read_word(0), 0x78563412);
+        let Data{data, cycles} = mem.read_word(0);
+        assert_eq!(data, 0x78563412);
     }
 }

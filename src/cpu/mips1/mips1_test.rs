@@ -26,12 +26,16 @@ impl Mem32 for LittleMemTest {
         0
     }
 
-    fn read_byte(&mut self, addr: Self::Addr) -> u8 {
-        self.bytes[addr as usize]
+    fn read_byte(&mut self, addr: Self::Addr) -> Data<u8> {
+        Data {
+            data: self.bytes[addr as usize],
+            cycles: 1
+        }
     }
 
-    fn write_byte(&mut self, addr: Self::Addr, data: u8) {
+    fn write_byte(&mut self, addr: Self::Addr, data: u8) -> usize {
         self.bytes[addr as usize] = data;
+        1
     }
 }
 
@@ -745,7 +749,7 @@ fn lwl() {
     let mut cpu = MIPSI::default();
 
     cpu.mut_mem().write_word(0, 0x8765_4321);
-    assert_eq!(cpu.mut_mem().read_byte(0), 0x21);
+    assert_eq!(cpu.mut_mem().read_byte(0).data, 0x21);
 
     cpu.write_gp(1, 1);
     cpu.lwl(1, 2, 0);
@@ -754,7 +758,7 @@ fn lwl() {
     let mut cpu = MIPSI::default();
 
     cpu.mut_mem().write_word(0, 0xFEDC_BA98);
-    assert_eq!(cpu.mut_mem().read_byte(3), 0xFE);
+    assert_eq!(cpu.mut_mem().read_byte(3).data, 0xFE);
 
     cpu.write_gp(1, 1);
     cpu.lwl(1, 2, 1);
@@ -766,7 +770,7 @@ fn lwr() {
     let mut cpu = MIPSI::default();
 
     cpu.mut_mem().write_word(0, 0x8765_4321);
-    assert_eq!(cpu.mut_mem().read_byte(0), 0x21);
+    assert_eq!(cpu.mut_mem().read_byte(0).data, 0x21);
 
     cpu.write_gp(1, 1);
     cpu.lwr(1, 2, 0);
@@ -775,7 +779,7 @@ fn lwr() {
     let mut cpu = MIPSI::default();
 
     cpu.mut_mem().write_word(0, 0xFEDC_BA98);
-    assert_eq!(cpu.mut_mem().read_byte(3), 0xFE);
+    assert_eq!(cpu.mut_mem().read_byte(3).data, 0xFE);
 
     cpu.write_gp(1, 1);
     cpu.lwr(1, 2, 1);
@@ -791,7 +795,7 @@ fn sb() {
 
     cpu.write_gp(1, 0);
     cpu.sb(1, 2, 0);
-    assert_eq!(cpu.mut_mem().read_word(0), 0x8765_43CD);
+    assert_eq!(cpu.mut_mem().read_word(0).data, 0x8765_43CD);
 
     let mut cpu = MIPSI::default();
 
@@ -800,7 +804,7 @@ fn sb() {
 
     cpu.write_gp(1, 8);
     cpu.sb(1, 2, 3);
-    assert_eq!(cpu.mut_mem().read_word(8), 0x78DC_BA98);
+    assert_eq!(cpu.mut_mem().read_word(8).data, 0x78DC_BA98);
 }
 
 #[test]
@@ -812,7 +816,7 @@ fn sh() {
 
     cpu.write_gp(1, 0);
     cpu.sh(1, 2, 0);
-    assert_eq!(cpu.mut_mem().read_word(0), 0x8765_ABCD);
+    assert_eq!(cpu.mut_mem().read_word(0).data, 0x8765_ABCD);
 
     let mut cpu = MIPSI::default();
 
@@ -821,7 +825,7 @@ fn sh() {
 
     cpu.write_gp(1, 8);
     cpu.sh(1, 2, 2);
-    assert_eq!(cpu.mut_mem().read_word(8), 0x5678_BA98);
+    assert_eq!(cpu.mut_mem().read_word(8).data, 0x5678_BA98);
 }
 
 #[test]
@@ -833,7 +837,7 @@ fn sw() {
 
     cpu.write_gp(1, 0);
     cpu.sw(1, 2, 0);
-    assert_eq!(cpu.mut_mem().read_word(0), 0xABCD);
+    assert_eq!(cpu.mut_mem().read_word(0).data, 0xABCD);
 
     let mut cpu = MIPSI::default();
 
@@ -842,7 +846,7 @@ fn sw() {
 
     cpu.write_gp(1, 6);
     cpu.sw(1, 2, 2);
-    assert_eq!(cpu.mut_mem().read_word(8), 0x1234_5678);
+    assert_eq!(cpu.mut_mem().read_word(8).data, 0x1234_5678);
 }
 
 #[test]
@@ -854,7 +858,7 @@ fn swl() {
 
     cpu.write_gp(1, 1);
     cpu.swl(1, 2, 0);
-    assert_eq!(cpu.mut_mem().read_word(0), 0x8765_0000);
+    assert_eq!(cpu.mut_mem().read_word(0).data, 0x8765_0000);
 
     let mut cpu = MIPSI::default();
 
@@ -863,7 +867,7 @@ fn swl() {
 
     cpu.write_gp(1, 8);
     cpu.swl(1, 2, 2);
-    assert_eq!(cpu.mut_mem().read_word(8), 0xFE12_3456);
+    assert_eq!(cpu.mut_mem().read_word(8).data, 0xFE12_3456);
 }
 
 #[test]
@@ -875,7 +879,7 @@ fn swr() {
 
     cpu.write_gp(1, 1);
     cpu.swr(1, 2, 0);
-    assert_eq!(cpu.mut_mem().read_word(0), 0x00AB_CD21);
+    assert_eq!(cpu.mut_mem().read_word(0).data, 0x00AB_CD21);
 
     let mut cpu = MIPSI::default();
 
@@ -884,7 +888,7 @@ fn swr() {
 
     cpu.write_gp(1, 8);
     cpu.swr(1, 2, 2);
-    assert_eq!(cpu.mut_mem().read_word(8), 0x5678_BA98);
+    assert_eq!(cpu.mut_mem().read_word(8).data, 0x5678_BA98);
 }
 
 // These tests test the operation of branches, but also rely on the correct behaviour of:

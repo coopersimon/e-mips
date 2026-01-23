@@ -1,3 +1,5 @@
+use crate::mem::Data;
+
 use super::*;
 
 /// The set of instructions defined in MIPS I.
@@ -266,52 +268,57 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     // Memory access
 
     /// Load byte signed
-    fn lb(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) {
+    fn lb(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) -> usize {
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
-        let byte = self.mut_mem().read_byte(addr.into());
-        self.write_gp(tgt_reg, sign_extend_8(byte));
+        let Data{data, cycles} = self.mut_mem().read_byte(addr.into());
+        self.write_gp(tgt_reg, sign_extend_8(data));
+        cycles
     }
 
     /// Load byte unsigned
-    fn lbu(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) {
+    fn lbu(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) -> usize {
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
-        let byte = self.mut_mem().read_byte(addr.into());
-        self.write_gp(tgt_reg, byte as u32);
+        let Data{data, cycles} = self.mut_mem().read_byte(addr.into());
+        self.write_gp(tgt_reg, data as u32);
+        cycles
     }
 
     /// Load halfword signed
-    fn lh(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) {
+    fn lh(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) -> usize {
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
-        let halfword = self.mut_mem().read_halfword(addr.into());
-        self.write_gp(tgt_reg, sign_extend_16(halfword));
+        let Data{data, cycles} = self.mut_mem().read_halfword(addr.into());
+        self.write_gp(tgt_reg, sign_extend_16(data));
+        cycles
     }
 
     /// Load halfword unsigned
-    fn lhu(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) {
+    fn lhu(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) -> usize {
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
-        let halfword = self.mut_mem().read_halfword(addr.into());
-        self.write_gp(tgt_reg, halfword as u32);
+        let Data{data, cycles} = self.mut_mem().read_halfword(addr.into());
+        self.write_gp(tgt_reg, data as u32);
+        cycles
     }
 
     /// Load word
-    fn lw(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) {
+    fn lw(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) -> usize {
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
-        let word = self.mut_mem().read_word(addr.into());
-        self.write_gp(tgt_reg, word);
+        let Data{data, cycles} = self.mut_mem().read_word(addr.into());
+        self.write_gp(tgt_reg, data);
+        cycles
     }
 
     /// Load word left
-    fn lwl(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) {
+    fn lwl(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) -> usize {
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
@@ -320,7 +327,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let byte_addr = addr & 3;
         let byte_offset = if Mem::LITTLE_ENDIAN { 3 - byte_addr } else { byte_addr };
 
-        let word = self.mut_mem().read_word(word_addr.into());
+        let Data { data, cycles } = self.mut_mem().read_word(word_addr.into());
         let old_word = match byte_offset {
             0 => 0,
             1 => 0xFFFF_FFFF >> 24,
@@ -331,11 +338,12 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
 
         let shift = byte_offset * 8;
 
-        self.write_gp(tgt_reg, old_word | (word << shift));
+        self.write_gp(tgt_reg, old_word | (data << shift));
+        cycles
     }
 
     /// Load word right
-    fn lwr(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) {
+    fn lwr(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) -> usize {
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
@@ -344,7 +352,7 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let byte_addr = addr & 3;
         let byte_offset = if Mem::LITTLE_ENDIAN { byte_addr } else { 3 - byte_addr };
 
-        let word = self.mut_mem().read_word(word_addr.into());
+        let Data { data, cycles } = self.mut_mem().read_word(word_addr.into());
         let old_word = match byte_offset {
             0 => 0,
             1 => 0xFFFF_FFFF << 24,
@@ -355,38 +363,39 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
 
         let shift = byte_offset * 8;
 
-        self.write_gp(tgt_reg, old_word | (word >> shift));
+        self.write_gp(tgt_reg, old_word | (data >> shift));
+        cycles
     }
 
     /// Store byte
-    fn sb(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) {
+    fn sb(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) -> usize {
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
         let data = self.read_gp(tgt_reg) as u8;
-        self.mut_mem().write_byte(addr.into(), data);
+        self.mut_mem().write_byte(addr.into(), data)
     }
 
     /// Store halfword
-    fn sh(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) {
+    fn sh(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) -> usize {
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
         let data = self.read_gp(tgt_reg) as u16;
-        self.mut_mem().write_halfword(addr.into(), data);
+        self.mut_mem().write_halfword(addr.into(), data)
     }
 
     /// Store word
-    fn sw(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) {
+    fn sw(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) -> usize {
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
         let data = self.read_gp(tgt_reg);
-        self.mut_mem().write_word(addr.into(), data);
+        self.mut_mem().write_word(addr.into(), data)
     }
 
     /// Store word left
-    fn swl(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) {
+    fn swl(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) -> usize {
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
@@ -396,21 +405,24 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let byte_offset = if Mem::LITTLE_ENDIAN { 3 - byte_addr } else { byte_addr };
 
         let word = self.read_gp(tgt_reg);
+        let mem = self.mut_mem();
+        let Data { data, cycles: load_cycles } = mem.read_word(word_addr.into());
         let old_word = match byte_offset {
             0 => 0,
             1 => 0xFFFF_FFFF << 24,
             2 => 0xFFFF_FFFF << 16,
             3 => 0xFFFF_FFFF << 8,
             _ => unreachable!()
-        } & self.mut_mem().read_word(word_addr.into());
+        } & data;
 
         let shift = byte_offset * 8;
 
-        self.mut_mem().write_word(word_addr.into(), old_word | (word >> shift));
+        let store_cycles = self.mut_mem().write_word(word_addr.into(), old_word | (word >> shift));
+        store_cycles + load_cycles
     }
 
     /// Store word right
-    fn swr(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) {
+    fn swr(&mut self, base_reg: u8, tgt_reg: u8, offset: u16) -> usize {
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
@@ -420,17 +432,20 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
         let byte_offset = if Mem::LITTLE_ENDIAN { byte_addr } else { 3 - byte_addr };
 
         let word = self.read_gp(tgt_reg);
+        let mem = self.mut_mem();
+        let Data { data, cycles: load_cycles } = mem.read_word(word_addr.into());
         let old_word = match byte_offset {
             0 => 0,
             1 => 0xFFFF_FFFF >> 24,
             2 => 0xFFFF_FFFF >> 16,
             3 => 0xFFFF_FFFF >> 8,
             _ => unreachable!()
-        } & self.mut_mem().read_word(word_addr.into());
+        } & data;
 
         let shift = byte_offset * 8;
 
-        self.mut_mem().write_word(word_addr.into(), old_word | (word << shift));
+        let store_cycles = mem.write_word(word_addr.into(), old_word | (word << shift));
+        store_cycles + load_cycles
     }
 
     /// Load upper immediate
@@ -608,21 +623,22 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
     }
 
     /// Load word into coprocessor
-    fn lwcz(&mut self, coproc: Coproc, base_reg: u8, cop_reg: u8, offset: u16) {
+    fn lwcz(&mut self, coproc: Coproc, base_reg: u8, cop_reg: u8, offset: u16) -> usize {
         let base = self.read_gp(base_reg);
         let offset32 = sign_extend_16(offset);
         let addr = base.wrapping_add(offset32);
-        let data = self.mut_mem().read_word(addr.into());
+        let Data { data, cycles } = self.mut_mem().read_word(addr.into());
         match coproc {
             Coproc::_0 => unreachable!(),
             Coproc::_1 => if let Some(cop) = self.coproc_1() {cop.move_to_reg(cop_reg, data)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
             Coproc::_2 => if let Some(cop) = self.coproc_2() {cop.move_to_reg(cop_reg, data)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
             Coproc::_3 => if let Some(cop) = self.coproc_3() {cop.move_to_reg(cop_reg, data)} else {self.trigger_exception(ExceptionCode::CoProcUnusable)},
         }
+        cycles
     }
 
     /// Store word from coprocessor
-    fn swcz(&mut self, coproc: Coproc, base_reg: u8, cop_reg: u8, offset: u16) {
+    fn swcz(&mut self, coproc: Coproc, base_reg: u8, cop_reg: u8, offset: u16) -> usize {
         if let Some(data) = match coproc {
             Coproc::_0 => unreachable!(),
             Coproc::_1 => self.coproc_1().map(|cop| cop.move_from_reg(cop_reg)),
@@ -632,9 +648,10 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
             let base = self.read_gp(base_reg);
             let offset32 = sign_extend_16(offset);
             let addr = base.wrapping_add(offset32);
-            self.mut_mem().write_word(addr.into(), data);
+            self.mut_mem().write_word(addr.into(), data)
         } else {
             self.trigger_exception(ExceptionCode::CoProcUnusable);
+            0
         }
     }
 
@@ -662,7 +679,7 @@ impl<
         use MIPSIInstruction::*;
 
         self.current_instr_addr = self.pc;
-        let instr_bits = self.mem.read_word(self.current_instr_addr.into());
+        let Data{data: instr_bits, mut cycles} = self.mem.read_word(self.current_instr_addr.into());
         self.pc = self.pc_next;
         self.pc_next = self.pc_next.wrapping_add(4);
 
@@ -695,10 +712,10 @@ impl<
                 SLT{source, target, dest}   => self.slt(source, target, dest),
                 SLTU{source, target, dest}  => self.sltu(source, target, dest),
 
-                JR{source}          => self.jr(source),
-                JALR{source, dest}  => self.jalr(source, dest),
-                SYSCALL             => self.syscall(),
-                BRK                 => self.brk(),
+                JR{source}                  => self.jr(source),
+                JALR{source, dest}          => self.jalr(source, dest),
+                SYSCALL                     => self.syscall(),
+                BRK                         => self.brk(),
 
                 ADDI{source, target, imm}   => self.addi(source, target, imm),
                 ADDIU{source, target, imm}  => self.addiu(source, target, imm),
@@ -717,38 +734,37 @@ impl<
                 BLTZAL{source, imm}         => self.bltzal(source, imm),
                 BGEZAL{source, imm}         => self.bgezal(source, imm),
 
-                LB{source, target, imm}     => self.lb(source, target, imm),
-                LBU{source, target, imm}    => self.lbu(source, target, imm),
-                LH{source, target, imm}     => self.lh(source, target, imm),
-                LHU{source, target, imm}    => self.lhu(source, target, imm),
-                LW{source, target, imm}     => self.lw(source, target, imm),
-                LWL{source, target, imm}    => self.lwl(source, target, imm),
-                LWR{source, target, imm}    => self.lwr(source, target, imm),
+                LB{source, target, imm}     => cycles += self.lb(source, target, imm),
+                LBU{source, target, imm}    => cycles += self.lbu(source, target, imm),
+                LH{source, target, imm}     => cycles += self.lh(source, target, imm),
+                LHU{source, target, imm}    => cycles += self.lhu(source, target, imm),
+                LW{source, target, imm}     => cycles += self.lw(source, target, imm),
+                LWL{source, target, imm}    => cycles += self.lwl(source, target, imm),
+                LWR{source, target, imm}    => cycles += self.lwr(source, target, imm),
 
-                SB{source, target, imm}     => self.sb(source, target, imm),
-                SH{source, target, imm}     => self.sh(source, target, imm),
-                SW{source, target, imm}     => self.sw(source, target, imm),
-                SWL{source, target, imm}    => self.swl(source, target, imm),
-                SWR{source, target, imm}    => self.swr(source, target, imm),
+                SB{source, target, imm}     => cycles += self.sb(source, target, imm),
+                SH{source, target, imm}     => cycles += self.sh(source, target, imm),
+                SW{source, target, imm}     => cycles += self.sw(source, target, imm),
+                SWL{source, target, imm}    => cycles += self.swl(source, target, imm),
+                SWR{source, target, imm}    => cycles += self.swr(source, target, imm),
 
-                LUI{target, imm} => self.lui(target, imm),
+                LUI{target, imm}            => self.lui(target, imm),
 
-                J{addr}     => self.j(addr),
-                JAL{addr}   => self.jal(addr),
+                J{addr}                             => self.j(addr),
+                JAL{addr}                           => self.jal(addr),
 
                 MFCZ{coproc, target, dest}          => self.mfcz(coproc, target, dest),
                 MTCZ{coproc, target, dest}          => self.mtcz(coproc, target, dest),
                 CFCZ{coproc, target, dest}          => self.cfcz(coproc, target, dest),
                 CTCZ{coproc, target, dest}          => self.ctcz(coproc, target, dest),
                 COPZ{coproc, fun}                   => self.copz(coproc, fun),
-                LWCZ{coproc, source, target, imm}   => self.lwcz(coproc, source, target, imm),
-                SWCZ{coproc, source, target, imm}   => self.swcz(coproc, source, target, imm),
+                LWCZ{coproc, source, target, imm}   => cycles += self.lwcz(coproc, source, target, imm),
+                SWCZ{coproc, source, target, imm}   => cycles += self.swcz(coproc, source, target, imm),
             }
         } else {
             self.trigger_exception(ExceptionCode::ReservedInstruction);
         }
 
-        let cycles = 1; // TODO: count cycles
         let int = self.mem.clock(cycles);
         if self.coproc0.external_interrupt(int) {
             self.trigger_exception(ExceptionCode::Interrupt);
