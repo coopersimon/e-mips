@@ -251,7 +251,7 @@ mod tests {
         mem.write_byte(2, 0x56);
         mem.write_byte(3, 0x78);
 
-        let Data{data, cycles} = mem.read_word(0);
+        let Data{data, ..} = mem.read_word(0);
         assert_eq!(data, 0x78563412);
     }
 }

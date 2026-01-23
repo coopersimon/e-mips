@@ -667,13 +667,12 @@ pub trait MIPSIInstructions<Mem>: MIPSICore<Mem = Mem>
 }
 
 impl<
-    Mem: Mem32,
-    C0: Coprocessor0,
+    Mem: Mem32 + Coprocessor0,
     C1: Coprocessor,
     C2: Coprocessor,
     C3: Coprocessor
-> MIPSCore for MIPSI<Mem, C0, C1, C2, C3>
-    where Mem::Addr: From<u32>, MIPSI<Mem, C0, C1, C2, C3>: MIPSIInstructions<Mem> {
+> MIPSCore for MIPSI<Mem, C1, C2, C3>
+    where Mem::Addr: From<u32>, MIPSI<Mem, C1, C2, C3>: MIPSIInstructions<Mem> {
 
     fn step(&mut self) {
         use MIPSIInstruction::*;
@@ -766,13 +765,13 @@ impl<
         }
 
         let int = self.mem.clock(cycles);
-        if self.coproc0.external_interrupt(int) {
+        if self.coproc_0().external_interrupt(int) {
             self.trigger_exception(ExceptionCode::Interrupt);
         }
     }
 
     fn reset(&mut self) {
-        let addr = self.coproc0.reset();
+        let addr = self.coproc_0().reset();
         self.pc = addr;
         self.pc_next = addr.wrapping_add(4);
     }

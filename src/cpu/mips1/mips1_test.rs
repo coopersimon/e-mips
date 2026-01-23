@@ -7,13 +7,17 @@ use crate::{
 };
 
 struct LittleMemTest {
-    bytes: Vec<u8>
+    bytes:          Vec<u8>,
+    coproc_reg:     [u32; 32],
+    last_exception: Option<ExceptionCode>,
 }
 
 impl LittleMemTest {
     fn new(size: usize) -> Self {
         Self {
-            bytes: vec![0; size]
+            bytes: vec![0; size],
+            coproc_reg: [0; 32],
+            last_exception: None,
         }
     }
 }
@@ -39,18 +43,12 @@ impl Mem32 for LittleMemTest {
     }
 }
 
-#[derive(Default)]
-struct TestCoproc0 {
-    data_reg:       [u32; 32],
-    last_exception: Option<ExceptionCode>,
-}
-
-impl Coprocessor0 for TestCoproc0 {
+impl Coprocessor0 for LittleMemTest {
     fn move_from_reg(&mut self, reg: u8) -> u32 {
-        self.data_reg[reg as usize]
+        self.coproc_reg[reg as usize]
     }
     fn move_to_reg(&mut self, reg: u8, val: u32) {
-        self.data_reg[reg as usize] = val;
+        self.coproc_reg[reg as usize] = val;
     }
 
     fn operation(&mut self, op: u32) {
@@ -113,10 +111,9 @@ impl Coprocessor for TestCoproc {
     }
 }
 
-impl MIPSI<LittleMemTest, TestCoproc0, TestCoproc, EmptyCoproc, EmptyCoproc> {
+impl MIPSI<LittleMemTest, TestCoproc, EmptyCoproc, EmptyCoproc> {
     fn default() -> Self {
         Self::with_memory(Box::new(LittleMemTest::new(0x1000)))
-            .add_coproc0(TestCoproc0::default())
             .add_coproc1(TestCoproc::default())
             .build()
     }
@@ -164,7 +161,7 @@ fn add() {
     cpu.write_gp(2, 0x5);
     cpu.add(1, 2, 3);
     assert_eq!(cpu.read_gp(3), 4);
-    assert!(cpu.coproc0.last_exception.is_none());
+    assert!(cpu.mem.last_exception.is_none());
 
     // Test overflow.
     let mut cpu = MIPSI::default();
@@ -173,7 +170,7 @@ fn add() {
     cpu.write_gp(2, 0xFFFF_0000);
     cpu.add(1, 2, 3);
     assert_eq!(cpu.read_gp(3), 0);
-    assert_eq!(cpu.coproc0.last_exception, Some(ExceptionCode::ArithmeticOverflow));
+    assert_eq!(cpu.mem.last_exception, Some(ExceptionCode::ArithmeticOverflow));
 }
 
 #[test]
@@ -189,7 +186,7 @@ fn addi() {
     cpu.write_gp(1, 0x10000);
     cpu.addi(1, 2, 0x8000);
     assert_eq!(cpu.read_gp(2), 0x8000);
-    assert!(cpu.coproc0.last_exception.is_none());
+    assert!(cpu.mem.last_exception.is_none());
 
     // Test overflow.
     let mut cpu = MIPSI::default();
@@ -197,7 +194,7 @@ fn addi() {
     cpu.write_gp(1, 0x7FFF_FFFF);
     cpu.addi(1, 2, 0x100);
     assert_eq!(cpu.read_gp(2), 0);
-    assert_eq!(cpu.coproc0.last_exception, Some(ExceptionCode::ArithmeticOverflow));
+    assert_eq!(cpu.mem.last_exception, Some(ExceptionCode::ArithmeticOverflow));
 }
 
 #[test]
@@ -215,7 +212,7 @@ fn addu() {
     cpu.write_gp(2, 0x5);
     cpu.addu(1, 2, 3);
     assert_eq!(cpu.read_gp(3), 4);
-    assert!(cpu.coproc0.last_exception.is_none());
+    assert!(cpu.mem.last_exception.is_none());
 
     // Test overflow.
     let mut cpu = MIPSI::default();
@@ -224,7 +221,7 @@ fn addu() {
     cpu.write_gp(2, 0xFFFF_0000);
     cpu.addu(1, 2, 3);
     assert_eq!(cpu.read_gp(3), 0x7FFF_0000);
-    assert_eq!(cpu.coproc0.last_exception, None);
+    assert_eq!(cpu.mem.last_exception, None);
 }
 
 #[test]
@@ -240,7 +237,7 @@ fn addiu() {
     cpu.write_gp(1, 0x10000);
     cpu.addiu(1, 2, 0x8000);
     assert_eq!(cpu.read_gp(2), 0x8000);
-    assert!(cpu.coproc0.last_exception.is_none());
+    assert!(cpu.mem.last_exception.is_none());
 
     // Test overflow.
     let mut cpu = MIPSI::default();
@@ -248,7 +245,7 @@ fn addiu() {
     cpu.write_gp(1, 0x7FFF_FFFF);
     cpu.addiu(1, 2, 0x100);
     assert_eq!(cpu.read_gp(2), 0x8000_00FF);
-    assert_eq!(cpu.coproc0.last_exception, None);
+    assert_eq!(cpu.mem.last_exception, None);
 }
 
 #[test]
@@ -266,7 +263,7 @@ fn sub() {
     cpu.write_gp(2, 0xFFFFFFFF);
     cpu.sub(1, 2, 3);
     assert_eq!(cpu.read_gp(3), 0xFFFF_FFFF);
-    assert!(cpu.coproc0.last_exception.is_none());
+    assert!(cpu.mem.last_exception.is_none());
 
     // Test overflow.
     let mut cpu = MIPSI::default();
@@ -275,7 +272,7 @@ fn sub() {
     cpu.write_gp(2, 0x1);
     cpu.sub(1, 2, 3);
     assert_eq!(cpu.read_gp(3), 0);
-    assert_eq!(cpu.coproc0.last_exception, Some(ExceptionCode::ArithmeticOverflow));
+    assert_eq!(cpu.mem.last_exception, Some(ExceptionCode::ArithmeticOverflow));
 }
 
 #[test]
@@ -294,7 +291,7 @@ fn subu() {
     cpu.write_gp(2, 0xFFFFFFFF);
     cpu.subu(1, 2, 3);
     assert_eq!(cpu.read_gp(3), 0xFFFF_FFFF);
-    assert!(cpu.coproc0.last_exception.is_none());
+    assert!(cpu.mem.last_exception.is_none());
 
     // Test overflow.
     let mut cpu = MIPSI::default();
@@ -303,7 +300,7 @@ fn subu() {
     cpu.write_gp(2, 0x1);
     cpu.subu(1, 2, 3);
     assert_eq!(cpu.read_gp(3), 0x7FFF_FFFF);
-    assert_eq!(cpu.coproc0.last_exception, None);
+    assert_eq!(cpu.mem.last_exception, None);
 }
 
 #[test]
