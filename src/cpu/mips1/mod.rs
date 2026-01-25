@@ -23,9 +23,16 @@ pub struct MIPSI<
     hi:         u32,
     lo:         u32,
 
-    current_instr_addr:  u32,
-    pc:         u32,
-    pc_next:    u32,
+    /// Program counter of the next instruction.
+    pc:             u32,
+    /// Program counter of the instruction after.
+    pc_next:        u32,
+    /// This is used when exceptions occur.
+    current_instr_addr: u32,
+    /// The current instruction is in the branch delay slot.
+    branch_delay:       bool,
+    /// An interrupt occurred in the branch delay slot.
+    branch_interrupt:   bool,
 
     mem:        Box<Mem>,
 
@@ -47,9 +54,11 @@ impl<
             hi:         0,
             lo:         0,
 
-            current_instr_addr:  0,
             pc:         0,
             pc_next:    4,
+            current_instr_addr: 0,
+            branch_delay:       false,
+            branch_interrupt:   false,
 
             mem:        mem,
 
@@ -173,25 +182,27 @@ impl<
     }
 
     fn branch(&mut self, offset: u32) {
+        self.branch_delay = true;
         self.pc_next = self.pc.wrapping_add(offset);
     }
 
     fn jump_global(&mut self, addr: u32) {
+        self.branch_delay = true;
         self.pc_next = addr;
     }
 
     fn jump_segment(&mut self, segment_addr: u32) {
+        self.branch_delay = true;
         let hi = self.pc_next & 0xF000_0000;
         self.pc_next = hi | segment_addr;
     }
 
     fn trigger_exception(&mut self, exception: ExceptionCode) {
-        let branch_delay = self.current_instr_addr.wrapping_add(4) != self.pc;
         let exception = Exception {
             code: exception,
-            ret_addr: if branch_delay {self.current_instr_addr.wrapping_sub(4)} else {self.current_instr_addr},
+            ret_addr: if self.branch_delay {self.current_instr_addr.wrapping_sub(4)} else {self.current_instr_addr},
             bad_virtual_addr: 0, // TODO!
-            branch_delay,
+            branch_delay: self.branch_delay,
         };
         self.pc = self.coproc_0().trigger_exception(&exception);
         self.pc_next = self.pc.wrapping_add(4);

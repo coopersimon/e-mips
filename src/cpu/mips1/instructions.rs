@@ -681,6 +681,7 @@ impl<
         let Data{data: instr_bits, mut cycles} = self.mem.read_word(self.current_instr_addr.into());
         self.pc = self.pc_next;
         self.pc_next = self.pc_next.wrapping_add(4);
+        let in_branch_delay = self.branch_delay;
 
         if let Some(instr) = MIPSIInstruction::decode(instr_bits) {
             match instr {
@@ -764,9 +765,19 @@ impl<
             self.trigger_exception(ExceptionCode::ReservedInstruction);
         }
 
+        if in_branch_delay {
+            self.branch_delay = false;
+        }
+
         let int = self.mem.clock(cycles);
-        if self.coproc_0().external_interrupt(int) {
-            self.trigger_exception(ExceptionCode::Interrupt);
+        if self.coproc_0().external_interrupt(int) || self.branch_interrupt {
+            if self.branch_delay {
+                self.branch_interrupt = true;
+            } else {
+                self.current_instr_addr = self.pc;
+                self.branch_interrupt = false;
+                self.trigger_exception(ExceptionCode::Interrupt);
+            }
         }
     }
 
