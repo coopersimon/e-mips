@@ -685,6 +685,8 @@ impl<
 
         if let Some(instr) = MIPSIInstruction::decode(instr_bits) {
             match instr {
+                NOP => (),
+
                 ADD{source, target, dest}   => self.add(source, target, dest),
                 ADDU{source, target, dest}  => self.addu(source, target, dest),
                 SUB{source, target, dest}   => self.sub(source, target, dest),
@@ -765,6 +767,8 @@ impl<
             self.trigger_exception(ExceptionCode::ReservedInstruction);
         }
 
+        // TODO: this test takes up a not insignficiant amount of time.
+        // Remove this if possible.
         if in_branch_delay {
             self.branch_delay = false;
         }
@@ -790,6 +794,8 @@ impl<
 
 #[derive(Clone)]
 pub enum MIPSIInstruction {
+    NOP, // SLL 0, 0, 0
+
     ADD{source: u8, target: u8, dest: u8},
     ADDU{source: u8, target: u8, dest: u8},
     SUB{source: u8, target: u8, dest: u8},
@@ -870,7 +876,10 @@ pub enum MIPSIInstruction {
 impl MIPSIInstruction {
     pub fn decode(instr: u32) -> Option<Self> {
         use MIPSIInstruction::*;
-        let op = || -> u8 {
+        if instr == 0 {
+            return Some(NOP);
+        }
+        let op = {
             const MASK: u32 = 0xFC00_0000;
             const SHIFT: usize = 26;
             ((instr & MASK) >> SHIFT) as u8
@@ -910,7 +919,7 @@ impl MIPSIInstruction {
             const MASK: u32 = 0x01FF_FFFF;
             instr & MASK
         };
-        match op() {
+        match op {
             0 => match special_op {
                 0x20 => Some(ADD{source, target, dest}),
                 0x21 => Some(ADDU{source, target, dest}),
@@ -1041,6 +1050,7 @@ impl std::fmt::Display for MIPSIInstruction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use MIPSIInstruction::*;
         match *self {
+            NOP => write!(f, "NOP"),
             ADD{source, target, dest} => write!(f, "ADD {},{},{}", dest, source, target),
             ADDU{source, target, dest} => write!(f, "ADDU {},{},{}", dest, source, target),
             SUB{source, target, dest} => write!(f, "SUB {},{},{}", dest, source, target),
